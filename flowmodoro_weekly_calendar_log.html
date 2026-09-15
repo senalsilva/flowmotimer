@@ -1,0 +1,937 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-950 text-slate-100 dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Flowmodoro & Weekly Calendar Log</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Plus Jakarta Sans', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+            tall: ['Bebas Neue', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#f0fdf4',
+              400: '#4ade80',
+              500: '#22c55e',
+              600: '#16a34a',
+              900: '#14532d',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Custom Scrollbar Styling */
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: rgba(9, 13, 22, 0.6); }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.15); border-radius: 4px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.3); }
+    
+    /* Pixel Rain Ambient Background */
+    .bg-pixel-rain {
+      background-color: #0b0f19;
+      background-image: 
+        radial-gradient(at 50% 0%, rgba(16, 185, 129, 0.12) 0px, transparent 70%),
+        radial-gradient(at 100% 100%, rgba(14, 165, 233, 0.1) 0px, transparent 60%),
+        url('u0jcgaob0w8a1.jpg');
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      background-attachment: fixed;
+    }
+
+    /* Dynamic rain drop animation overlay if image isn't loaded */
+    .rain-overlay {
+      background: linear-gradient(to bottom, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.03) 75%, rgba(255, 255, 255, 0) 100%);
+      animation: rainFall 1.2s infinite linear;
+    }
+    @keyframes rainFall {
+      0% { transform: translateY(-100%); }
+      100% { transform: translateY(100%); }
+    }
+
+    /* Radial Glow effects */
+    .glow-emerald {
+      box-shadow: 0 0 70px -5px rgba(34, 197, 94, 0.28);
+    }
+    .glow-amber {
+      box-shadow: 0 0 70px -5px rgba(245, 158, 11, 0.28);
+    }
+    .glow-indigo {
+      box-shadow: 0 0 70px -5px rgba(99, 102, 241, 0.28);
+    }
+
+    /* Pulse animation for active work timer */
+    @keyframes pulse-ring {
+      0% { transform: scale(0.98); opacity: 0.9; }
+      50% { transform: scale(1.02); opacity: 0.4; }
+      100% { transform: scale(0.98); opacity: 0.9; }
+    }
+    .timer-ring-active {
+      animation: pulse-ring 3s infinite ease-in-out;
+    }
+  </style>
+</head>
+<body class="h-full font-sans antialiased text-slate-100 flex bg-pixel-rain selection:bg-emerald-500 selection:text-slate-950 overflow-hidden relative">
+
+  <!-- Background Dark Atmosphere Overlay & Animated Rain Effect -->
+  <div class="fixed inset-0 bg-slate-950/75 backdrop-blur-[2px] pointer-events-none z-0"></div>
+  <div class="fixed inset-0 rain-overlay pointer-events-none z-0 opacity-40"></div>
+
+  <!-- MAIN WRAPPER WITH MINIMAL CONDENSED ICON SIDEBAR -->
+  <div class="relative z-10 flex w-full h-full">
+
+    <!-- CONDENSED ICON-ONLY SIDEBAR -->
+    <aside class="w-16 md:w-16 bg-slate-950/85 border-r border-slate-800/80 backdrop-blur-2xl flex flex-col items-center justify-between py-5 shrink-0 transition-all z-20">
+      
+      <!-- Top Section: Logo & Toggle Icons -->
+      <div class="flex flex-col items-center gap-6 w-full px-2">
+        
+        <!-- App Logo -->
+        <div class="h-10 w-10 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-slate-950 font-black text-xl shadow-lg shadow-emerald-500/30 shrink-0 cursor-pointer" title="Flowmodoro">
+          <i class="fa-solid fa-hourglass-half text-base"></i>
+        </div>
+
+        <div class="w-8 h-[1px] bg-slate-800/80 my-1"></div>
+
+        <!-- CONDENSED ICON TABS -->
+        <nav class="flex flex-col items-center gap-3 w-full">
+          
+          <!-- Timer Tab Icon -->
+          <button id="navTabTimer" onclick="switchTab('timer')" class="h-11 w-11 rounded-2xl flex items-center justify-center transition text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 shadow-lg shadow-emerald-500/10 group relative" title="Timer View">
+            <i class="fa-solid fa-stopwatch text-lg"></i>
+            <span class="absolute left-14 bg-slate-900 border border-slate-800 text-slate-200 text-xs font-semibold px-2.5 py-1 rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none transition whitespace-nowrap shadow-xl z-50">Timer View</span>
+          </button>
+
+          <!-- Weekly Log Tab Icon -->
+          <button id="navTabCalendar" onclick="switchTab('calendar')" class="h-11 w-11 rounded-2xl flex items-center justify-center transition text-slate-400 hover:text-slate-200 hover:bg-slate-900/80 border border-transparent group relative" title="Weekly Study Log">
+            <i class="fa-regular fa-calendar-days text-lg"></i>
+            <span class="absolute left-14 bg-slate-900 border border-slate-800 text-slate-200 text-xs font-semibold px-2.5 py-1 rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none transition whitespace-nowrap shadow-xl z-50">Weekly Study Log</span>
+          </button>
+
+        </nav>
+      </div>
+
+      <!-- Bottom Section: Settings & Ratio Icon -->
+      <div class="flex flex-col items-center gap-3 w-full px-2">
+        
+        <button onclick="toggleRatioSettings()" class="h-10 w-10 rounded-xl bg-slate-900/90 border border-slate-800 hover:bg-slate-800 text-emerald-400 hover:text-emerald-300 transition flex items-center justify-center group relative" title="Flow Ratio Settings">
+          <i class="fa-solid fa-sliders text-sm"></i>
+          <span class="absolute left-14 bg-slate-900 border border-slate-800 text-slate-200 text-xs font-semibold px-2.5 py-1 rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none transition whitespace-nowrap shadow-xl z-50">
+            Ratio (<span id="sidebarRatioText">1:5</span>)
+          </span>
+        </button>
+
+      </div>
+    </aside>
+
+    <!-- RIGHT MAIN CONTENT AREA -->
+    <main class="flex-1 h-full overflow-y-auto custom-scrollbar p-4 md:p-8 flex flex-col">
+
+      <!-- TAB 1: TIMER VIEW (HUGE TALL FONT TIMER) -->
+      <div id="tabContentTimer" class="max-w-4xl w-full mx-auto my-auto py-6 flex flex-col items-center justify-center space-y-6">
+        
+        <!-- Big Glassmorphism Timer Card -->
+        <div id="timerCardContainer" class="w-full bg-slate-950/70 border border-slate-800/90 rounded-3xl p-8 md:p-12 shadow-2xl relative overflow-hidden backdrop-blur-2xl transition-all duration-500 glow-emerald flex flex-col items-center">
+          
+          <!-- Timer Status Header -->
+          <div class="w-full flex items-center justify-between mb-6">
+            <span id="timerStatusBadge" class="px-4 py-1.5 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 uppercase tracking-widest flex items-center gap-2">
+              <span class="h-2 w-2 rounded-full bg-emerald-400 animate-ping"></span>
+              <span>Focus Flow</span>
+            </span>
+
+            <div class="flex items-center gap-3">
+              <span class="hidden sm:inline text-xs font-mono text-slate-400 bg-slate-900/60 px-3 py-1.5 rounded-xl border border-slate-800/80">
+                Today: <strong id="sidebarTodayFocus" class="text-emerald-400">0h 0m</strong>
+              </span>
+              <span id="breakEarnedTag" class="text-xs md:text-sm font-mono font-semibold text-slate-300 bg-slate-900/90 px-4 py-2 rounded-2xl border border-slate-800/80 shadow-inner">
+                Earned Break: <strong id="calculatedBreakTime" class="text-teal-400 font-bold">00:00</strong>
+              </span>
+            </div>
+          </div>
+
+          <!-- HUGE "TALL FONT" DISPLAY -->
+          <div class="relative w-full my-4 flex flex-col items-center justify-center">
+            
+            <!-- Dynamic Ring Halo Visual -->
+            <div id="ringBorderEffect" class="absolute inset-0 rounded-3xl border-2 border-emerald-500/40 timer-ring-active pointer-events-none transition-all duration-500"></div>
+
+            <span id="timerSubtitle" class="text-xs md:text-sm font-bold uppercase tracking-widest text-slate-400 mt-6 mb-2">Focus Elapsed</span>
+            
+            <!-- MAIN TALL TIMER NUMBERS -->
+            <div id="mainTimerDisplay" class="font-tall text-7xl sm:text-9xl md:text-[11rem] font-extrabold tracking-wider text-white drop-shadow-[0_10px_20px_rgba(0,0,0,0.8)] leading-none my-2 select-none">
+              00:00:00
+            </div>
+
+            <!-- Paused status notice -->
+            <div id="pausedNotice" class="mb-4 text-xs font-semibold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-4 py-1 rounded-full opacity-0 transition-opacity">
+              <i class="fa-solid fa-pause text-[10px] mr-1"></i> Paused (Break Stopped)
+            </div>
+          </div>
+
+          <!-- Interactive Action Buttons -->
+          <div class="w-full max-w-xl space-y-3 mt-4">
+            
+            <!-- Work Flow Controls -->
+            <div id="workControls" class="grid grid-cols-3 gap-3 md:gap-4">
+              <button id="btnStartWork" onclick="startWorkTimer()" class="py-4 px-6 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-2xl text-sm md:text-base flex items-center justify-center gap-2 shadow-xl shadow-emerald-500/25 hover:scale-[1.02] active:scale-[0.98] transition">
+                <i class="fa-solid fa-play"></i>
+                <span>Start Flow</span>
+              </button>
+
+              <button id="btnPauseWork" onclick="pauseWorkTimer()" disabled class="py-4 px-6 bg-slate-900/90 hover:bg-slate-800 disabled:opacity-40 text-amber-400 font-bold rounded-2xl text-sm md:text-base flex items-center justify-center gap-2 border border-slate-700/80 transition">
+                <i class="fa-solid fa-pause"></i>
+                <span id="pauseBtnLabel">Pause</span>
+              </button>
+
+              <button id="btnStopAndBreak" onclick="triggerBreakMode()" disabled class="py-4 px-6 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white font-bold rounded-2xl text-sm md:text-base flex items-center justify-center gap-2 shadow-xl shadow-indigo-600/25 transition">
+                <i class="fa-solid fa-mug-hot"></i>
+                <span>Rest Now</span>
+              </button>
+            </div>
+
+            <!-- Rest Mode Controls -->
+            <div id="breakControls" class="hidden grid-cols-2 gap-3 md:gap-4">
+              <button id="btnPauseBreak" onclick="pauseBreakTimer()" class="py-4 px-6 bg-slate-900/90 hover:bg-slate-800 text-amber-400 font-bold rounded-2xl text-sm md:text-base flex items-center justify-center gap-2 border border-slate-700/80 transition">
+                <i class="fa-solid fa-pause"></i>
+                <span id="pauseBreakBtnLabel">Pause Break</span>
+              </button>
+
+              <button onclick="skipBreakAndReset()" class="py-4 px-6 bg-slate-900/90 hover:bg-slate-800 text-slate-300 font-bold rounded-2xl text-sm md:text-base flex items-center justify-center gap-2 border border-slate-700/80 transition">
+                <i class="fa-solid fa-forward-step"></i>
+                <span>End Rest</span>
+              </button>
+            </div>
+
+          </div>
+
+          <!-- Session Footer Stats -->
+          <div class="w-full max-w-xl mt-8 pt-6 border-t border-slate-800/80 grid grid-cols-3 gap-3 text-center text-xs">
+            <div class="bg-slate-900/60 p-3 rounded-2xl border border-slate-800/80">
+              <span class="text-slate-400 block text-[10px] font-semibold uppercase">Started At</span>
+              <span id="sessionStartTimeDisplay" class="font-mono text-slate-200 font-bold">--:--</span>
+            </div>
+            <div class="bg-slate-900/60 p-3 rounded-2xl border border-slate-800/80">
+              <span class="text-slate-400 block text-[10px] font-semibold uppercase">Pauses Logged</span>
+              <span id="sessionPauseCount" class="font-mono text-amber-400 font-bold">0 breaks</span>
+            </div>
+            <div class="bg-slate-900/60 p-3 rounded-2xl border border-slate-800/80">
+              <span class="text-slate-400 block text-[10px] font-semibold uppercase">Break Ratio</span>
+              <span id="currentRatioBadge" class="font-mono text-emerald-400 font-bold">1 : 5 (20%)</span>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- TAB 2: WEEKLY STUDY LOG CALENDAR (FULL WIDTH) -->
+      <div id="tabContentCalendar" class="hidden max-w-[1500px] w-full mx-auto space-y-6">
+
+        <!-- Calendar Header Navigation -->
+        <div class="bg-slate-950/80 border border-slate-800/80 rounded-3xl p-6 shadow-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 backdrop-blur-xl">
+          <div>
+            <h2 class="text-lg font-extrabold text-white flex items-center gap-2">
+              <i class="fa-regular fa-calendar-days text-emerald-400"></i>
+              Weekly Study Session Log
+            </h2>
+            <p id="weekRangeLabel" class="text-xs text-slate-400 mt-1 font-medium">Loading current week dates...</p>
+          </div>
+
+          <div class="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
+            <span class="text-xs font-mono text-slate-400 bg-slate-900 px-3 py-2 rounded-2xl border border-slate-800 hidden md:inline">
+              Week Total: <strong id="sidebarWeekFocus" class="text-teal-300">0h 0m</strong>
+            </span>
+
+            <div class="inline-flex rounded-2xl bg-slate-900 p-1 border border-slate-800 text-xs">
+              <button onclick="changeWeek(-1)" class="px-3 py-2 hover:bg-slate-800 rounded-xl text-slate-400 hover:text-white transition" title="Previous Week">
+                <i class="fa-solid fa-chevron-left"></i>
+              </button>
+              <button onclick="resetToCurrentWeek()" class="px-4 py-2 hover:bg-slate-800 rounded-xl text-slate-200 font-bold transition">
+                Today
+              </button>
+              <button onclick="changeWeek(1)" class="px-3 py-2 hover:bg-slate-800 rounded-xl text-slate-400 hover:text-white transition" title="Next Week">
+                <i class="fa-solid fa-chevron-right"></i>
+              </button>
+            </div>
+
+            <button onclick="clearWeekDataModal()" class="p-3 rounded-2xl bg-slate-900 border border-slate-800 hover:bg-rose-950/50 hover:border-rose-800 text-slate-400 hover:text-rose-400 transition text-xs" title="Clear log history">
+              <i class="fa-solid fa-trash-can"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- GOOGLE CALENDAR STYLE WEEK GRID -->
+        <div class="bg-slate-950/80 border border-slate-800/80 rounded-3xl p-5 shadow-2xl overflow-hidden backdrop-blur-xl flex flex-col h-[700px]">
+          
+          <!-- Days Header Row -->
+          <div class="grid grid-cols-8 border-b border-slate-800/80 text-center text-xs font-semibold pb-4 text-slate-400">
+            <div class="text-[10px] text-slate-500 uppercase flex items-center justify-center font-mono">Time</div>
+            <div id="dayCol-0" class="flex flex-col items-center">
+              <span class="text-[10px] uppercase text-slate-400 font-mono">Mon</span>
+              <span class="date-num text-sm text-slate-200 font-bold mt-1">--</span>
+            </div>
+            <div id="dayCol-1" class="flex flex-col items-center">
+              <span class="text-[10px] uppercase text-slate-400 font-mono">Tue</span>
+              <span class="date-num text-sm text-slate-200 font-bold mt-1">--</span>
+            </div>
+            <div id="dayCol-2" class="flex flex-col items-center">
+              <span class="text-[10px] uppercase text-slate-400 font-mono">Wed</span>
+              <span class="date-num text-sm text-slate-200 font-bold mt-1">--</span>
+            </div>
+            <div id="dayCol-3" class="flex flex-col items-center">
+              <span class="text-[10px] uppercase text-slate-400 font-mono">Thu</span>
+              <span class="date-num text-sm text-slate-200 font-bold mt-1">--</span>
+            </div>
+            <div id="dayCol-4" class="flex flex-col items-center">
+              <span class="text-[10px] uppercase text-slate-400 font-mono">Fri</span>
+              <span class="date-num text-sm text-slate-200 font-bold mt-1">--</span>
+            </div>
+            <div id="dayCol-5" class="flex flex-col items-center">
+              <span class="text-[10px] uppercase text-slate-400 font-mono">Sat</span>
+              <span class="date-num text-sm text-slate-200 font-bold mt-1">--</span>
+            </div>
+            <div id="dayCol-6" class="flex flex-col items-center">
+              <span class="text-[10px] uppercase text-slate-400 font-mono">Sun</span>
+              <span class="date-num text-sm text-slate-200 font-bold mt-1">--</span>
+            </div>
+          </div>
+
+          <!-- Scrollable Hourly Grid Area -->
+          <div id="calendarScrollContainer" class="flex-1 overflow-y-auto custom-scrollbar relative mt-2">
+            <div class="relative min-h-[1152px]"> <!-- 24 hours * 48px per hour -->
+              
+              <!-- Hourly Rows background -->
+              <div id="timeGridRows" class="absolute inset-0 flex flex-col pointer-events-none"></div>
+
+              <!-- Columns overlay for rendered session blocks -->
+              <div class="absolute inset-0 grid grid-cols-8">
+                <div class="border-r border-slate-800/40"></div>
+                <div id="eventCol-0" class="relative border-r border-slate-800/40"></div>
+                <div id="eventCol-1" class="relative border-r border-slate-800/40"></div>
+                <div id="eventCol-2" class="relative border-r border-slate-800/40"></div>
+                <div id="eventCol-3" class="relative border-r border-slate-800/40"></div>
+                <div id="eventCol-4" class="relative border-r border-slate-800/40"></div>
+                <div id="eventCol-5" class="relative border-r border-slate-800/40"></div>
+                <div id="eventCol-6" class="relative"></div>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </main>
+
+  </div>
+
+  <!-- EVENT DETAILS INSPECTOR MODAL -->
+  <div id="eventDetailsModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-sm w-full p-6 shadow-2xl space-y-5 relative">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+        <h3 class="font-bold text-white text-base flex items-center gap-2">
+          <i class="fa-solid fa-clock text-emerald-400"></i> Study Session Details
+        </h3>
+        <button onclick="closeEventModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+
+      <div class="space-y-4 text-xs">
+        
+        <!-- Time slot highlight badge -->
+        <div class="bg-emerald-500/10 border border-emerald-500/20 p-4 rounded-2xl text-center">
+          <span class="text-[10px] uppercase font-bold text-emerald-400 tracking-wider block mb-1">Time Range</span>
+          <div id="modalTimeRange" class="font-mono text-base font-extrabold text-white">4:15 PM – 4:30 PM</div>
+          <div id="modalDateString" class="text-slate-400 text-[11px] mt-1 font-medium">Monday, Sept 14</div>
+        </div>
+
+        <!-- Session Meta Stats -->
+        <div class="grid grid-cols-2 gap-3 text-center">
+          <div class="bg-slate-950 p-3 rounded-2xl border border-slate-800">
+            <span class="text-slate-500 text-[10px] font-bold uppercase block">Total Duration</span>
+            <span id="modalDuration" class="font-mono text-teal-300 font-bold text-sm">15 mins</span>
+          </div>
+          <div class="bg-slate-950 p-3 rounded-2xl border border-slate-800">
+            <span class="text-slate-500 text-[10px] font-bold uppercase block">Bathroom / Pauses</span>
+            <span id="modalPauses" class="font-mono text-amber-400 font-bold text-sm">0 pauses</span>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="flex gap-2 pt-2 border-t border-slate-800">
+        <button id="modalDeleteBtn" onclick="" class="w-full py-3 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 font-bold rounded-xl text-xs transition flex items-center justify-center gap-2">
+          <i class="fa-solid fa-trash-can"></i> Delete Session
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Ratio Settings Modal -->
+  <div id="settingsModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-5">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+        <h3 class="font-bold text-white text-base flex items-center gap-2">
+          <i class="fa-solid fa-sliders text-emerald-400"></i> Flowtime Ratio Settings
+        </h3>
+        <button onclick="toggleRatioSettings()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+      </div>
+
+      <div class="space-y-4 text-xs">
+        <div>
+          <label class="block text-slate-300 font-semibold mb-2">Select Break Ratio (Study Time ÷ Divisor)</label>
+          <select id="ratioSelect" class="w-full bg-slate-950 border border-slate-800 rounded-2xl p-3 text-slate-200 focus:border-emerald-500 focus:outline-none font-medium">
+            <option value="5">1/5th (Standard Flowtime: 25m work = 5m rest)</option>
+            <option value="4">1/4th (20m work = 5m rest)</option>
+            <option value="6">1/6th (30m work = 5m rest)</option>
+            <option value="3">1/3rd (Intense: 15m work = 5m rest)</option>
+          </select>
+        </div>
+
+        <div class="bg-slate-950 p-4 rounded-2xl border border-slate-800 text-slate-400 leading-relaxed text-[11px]">
+          The standard Flowtime ratio divides active work time by 5. All break times are calculated dynamically down to the second.
+        </div>
+      </div>
+
+      <div class="flex gap-2 pt-2 border-t border-slate-800">
+        <button onclick="saveRatioSettings()" class="flex-1 py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl text-xs transition">
+          Save Preference
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- JavaScript App Logic -->
+  <script>
+    const state = {
+      activeTab: 'timer',
+      mode: 'IDLE', // 'WORK_RUNNING', 'WORK_PAUSED', 'BREAK_RUNNING', 'BREAK_PAUSED'
+      workStartTime: null,
+      workElapsedMs: 0,
+      breakTotalSec: 0,
+      breakRemainingSec: 0,
+      pauseCount: 0,
+      divisor: parseInt(localStorage.getItem('flowmo_ratio') || '5'),
+      currentWeekOffset: 0,
+      timerInterval: null,
+      selectedSessionId: null,
+      sessions: JSON.parse(localStorage.getItem('flowmo_sessions_log') || '[]')
+    };
+
+    document.addEventListener('DOMContentLoaded', () => {
+      renderTimeGrid();
+      updateWeekCalendar();
+      updateRatioBadge();
+      updateStatsHeader();
+
+      const scrollContainer = document.getElementById('calendarScrollContainer');
+      if (scrollContainer) {
+        scrollContainer.scrollTop = 8 * 48; // Scroll to 8 AM default
+      }
+    });
+
+    function switchTab(tabName) {
+      state.activeTab = tabName;
+      const tabTimer = document.getElementById('tabContentTimer');
+      const tabCalendar = document.getElementById('tabContentCalendar');
+      const btnTimer = document.getElementById('navTabTimer');
+      const btnCalendar = document.getElementById('navTabCalendar');
+
+      if (tabName === 'timer') {
+        tabTimer.classList.remove('hidden');
+        tabCalendar.classList.add('hidden');
+
+        btnTimer.className = "h-11 w-11 rounded-2xl flex items-center justify-center transition text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 shadow-lg shadow-emerald-500/10 group relative";
+        btnCalendar.className = "h-11 w-11 rounded-2xl flex items-center justify-center transition text-slate-400 hover:text-slate-200 hover:bg-slate-900/80 border border-transparent group relative";
+      } else {
+        tabTimer.classList.add('hidden');
+        tabCalendar.classList.remove('hidden');
+
+        btnCalendar.className = "h-11 w-11 rounded-2xl flex items-center justify-center transition text-emerald-400 bg-emerald-500/15 border border-emerald-500/30 shadow-lg shadow-emerald-500/10 group relative";
+        btnTimer.className = "h-11 w-11 rounded-2xl flex items-center justify-center transition text-slate-400 hover:text-slate-200 hover:bg-slate-900/80 border border-transparent group relative";
+        updateWeekCalendar();
+      }
+    }
+
+    function startWorkTimer() {
+      if (state.mode === 'WORK_RUNNING') return;
+
+      if (state.mode === 'IDLE') {
+        state.workStartTime = new Date();
+        state.workElapsedMs = 0;
+        state.pauseCount = 0;
+        document.getElementById('sessionStartTimeDisplay').innerText = state.workStartTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      }
+
+      state.mode = 'WORK_RUNNING';
+      updateTimerUI();
+
+      if (state.timerInterval) clearInterval(state.timerInterval);
+
+      state.timerInterval = setInterval(() => {
+        state.workElapsedMs += 1000;
+        document.getElementById('mainTimerDisplay').innerText = formatMs(state.workElapsedMs);
+        
+        const earnedBreakSec = Math.floor((state.workElapsedMs / 1000) / state.divisor);
+        document.getElementById('calculatedBreakTime').innerText = formatSec(earnedBreakSec);
+      }, 1000);
+    }
+
+    function pauseWorkTimer() {
+      if (state.mode === 'WORK_RUNNING') {
+        state.mode = 'WORK_PAUSED';
+        state.pauseCount++;
+        clearInterval(state.timerInterval);
+        state.timerInterval = null;
+        updateTimerUI();
+      } else if (state.mode === 'WORK_PAUSED') {
+        startWorkTimer();
+      }
+    }
+
+    function triggerBreakMode() {
+      if (state.workElapsedMs < 10000) {
+        alert("Work session is too short to log (must be at least 10 seconds).");
+        return;
+      }
+
+      clearInterval(state.timerInterval);
+      
+      const endTime = new Date();
+      const startTime = state.workStartTime || new Date(endTime.getTime() - state.workElapsedMs);
+
+      const sessionObj = {
+        id: 'sess_' + Date.now(),
+        startTime: startTime.toISOString(),
+        endTime: endTime.toISOString(),
+        durationMs: state.workElapsedMs,
+        pauseCount: state.pauseCount
+      };
+
+      state.sessions.push(sessionObj);
+      localStorage.setItem('flowmo_sessions_log', JSON.stringify(state.sessions));
+
+      state.breakTotalSec = Math.floor((state.workElapsedMs / 1000) / state.divisor);
+      state.breakRemainingSec = state.breakTotalSec;
+
+      if (state.breakRemainingSec <= 0) {
+        resetToIdle();
+        updateWeekCalendar();
+        updateStatsHeader();
+        return;
+      }
+
+      state.mode = 'BREAK_RUNNING';
+      updateTimerUI();
+      updateWeekCalendar();
+      updateStatsHeader();
+
+      state.timerInterval = setInterval(() => {
+        if (state.breakRemainingSec > 0) {
+          state.breakRemainingSec--;
+          document.getElementById('mainTimerDisplay').innerText = formatSec(state.breakRemainingSec);
+        } else {
+          playChimeSound();
+          alert("🎉 Rest time complete! Ready to start your next focus session?");
+          resetToIdle();
+        }
+      }, 1000);
+    }
+
+    function pauseBreakTimer() {
+      if (state.mode === 'BREAK_RUNNING') {
+        state.mode = 'BREAK_PAUSED';
+        clearInterval(state.timerInterval);
+        state.timerInterval = null;
+        updateTimerUI();
+      } else if (state.mode === 'BREAK_PAUSED') {
+        state.mode = 'BREAK_RUNNING';
+        updateTimerUI();
+        state.timerInterval = setInterval(() => {
+          if (state.breakRemainingSec > 0) {
+            state.breakRemainingSec--;
+            document.getElementById('mainTimerDisplay').innerText = formatSec(state.breakRemainingSec);
+          } else {
+            playChimeSound();
+            alert("🎉 Rest time complete! Ready to start your next focus session?");
+            resetToIdle();
+          }
+        }, 1000);
+      }
+    }
+
+    function skipBreakAndReset() {
+      resetToIdle();
+    }
+
+    function resetToIdle() {
+      clearInterval(state.timerInterval);
+      state.timerInterval = null;
+      state.mode = 'IDLE';
+      state.workElapsedMs = 0;
+      state.workStartTime = null;
+      state.breakRemainingSec = 0;
+      state.pauseCount = 0;
+
+      document.getElementById('mainTimerDisplay').innerText = "00:00:00";
+      document.getElementById('calculatedBreakTime').innerText = "00:00";
+      document.getElementById('sessionStartTimeDisplay').innerText = "--:--";
+      document.getElementById('sessionPauseCount').innerText = "0 breaks";
+
+      updateTimerUI();
+    }
+
+    function updateTimerUI() {
+      const container = document.getElementById('timerCardContainer');
+      const badge = document.getElementById('timerStatusBadge');
+      const ring = document.getElementById('ringBorderEffect');
+      const subtitle = document.getElementById('timerSubtitle');
+      const pauseNotice = document.getElementById('pausedNotice');
+      
+      const btnStart = document.getElementById('btnStartWork');
+      const btnPause = document.getElementById('btnPauseWork');
+      const btnStop = document.getElementById('btnStopAndBreak');
+      const pauseBtnLabel = document.getElementById('pauseBtnLabel');
+
+      const workControls = document.getElementById('workControls');
+      const breakControls = document.getElementById('breakControls');
+
+      document.getElementById('sessionPauseCount').innerText = `${state.pauseCount} pause(s)`;
+
+      if (state.mode === 'WORK_RUNNING') {
+        workControls.classList.remove('hidden');
+        workControls.classList.add('grid');
+        breakControls.classList.add('hidden');
+
+        container.className = "w-full bg-slate-950/70 border border-emerald-500/30 rounded-3xl p-8 md:p-12 shadow-2xl relative overflow-hidden backdrop-blur-2xl transition-all duration-500 glow-emerald flex flex-col items-center";
+        badge.className = "px-4 py-1.5 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 uppercase tracking-widest flex items-center gap-2";
+        badge.innerHTML = `<span class="h-2 w-2 rounded-full bg-emerald-400 animate-ping"></span> Focus Flowing`;
+        ring.className = "absolute inset-0 rounded-3xl border-2 border-emerald-500/40 timer-ring-active pointer-events-none transition-all duration-500";
+        subtitle.innerText = "Focus Time Elapsed";
+        pauseNotice.classList.add('opacity-0');
+
+        btnStart.disabled = true;
+        btnStart.classList.add('opacity-50');
+        btnPause.disabled = false;
+        btnStop.disabled = false;
+        pauseBtnLabel.innerText = "Pause";
+
+      } else if (state.mode === 'WORK_PAUSED') {
+        workControls.classList.remove('hidden');
+        workControls.classList.add('grid');
+        breakControls.classList.add('hidden');
+
+        container.className = "w-full bg-slate-950/70 border border-amber-500/40 rounded-3xl p-8 md:p-12 shadow-2xl relative overflow-hidden backdrop-blur-2xl transition-all duration-500 glow-amber flex flex-col items-center";
+        badge.className = "px-4 py-1.5 rounded-full text-xs font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20 uppercase tracking-widest flex items-center gap-2";
+        badge.innerHTML = `<span class="h-2 w-2 rounded-full bg-amber-400"></span> Session Paused`;
+        ring.className = "absolute inset-0 rounded-3xl border-2 border-amber-500/40 pointer-events-none transition-all duration-500";
+        pauseNotice.classList.remove('opacity-0');
+
+        btnStart.disabled = true;
+        btnPause.disabled = false;
+        btnStop.disabled = false;
+        pauseBtnLabel.innerText = "Resume";
+
+      } else if (state.mode === 'BREAK_RUNNING') {
+        workControls.classList.add('hidden');
+        breakControls.classList.remove('hidden');
+        breakControls.classList.add('grid');
+
+        container.className = "w-full bg-slate-950/70 border border-indigo-500/40 rounded-3xl p-8 md:p-12 shadow-2xl relative overflow-hidden backdrop-blur-2xl transition-all duration-500 glow-indigo flex flex-col items-center";
+        badge.className = "px-4 py-1.5 rounded-full text-xs font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 uppercase tracking-widest flex items-center gap-2";
+        badge.innerHTML = `<span class="h-2 w-2 rounded-full bg-indigo-400 animate-pulse"></span> Rest Period`;
+        ring.className = "absolute inset-0 rounded-3xl border-2 border-indigo-500/40 timer-ring-active pointer-events-none transition-all duration-500";
+        subtitle.innerText = "Rest Countdown";
+        pauseNotice.classList.add('opacity-0');
+
+        document.getElementById('pauseBreakBtnLabel').innerText = "Pause Break";
+
+      } else if (state.mode === 'BREAK_PAUSED') {
+        workControls.classList.add('hidden');
+        breakControls.classList.remove('hidden');
+        breakControls.classList.add('grid');
+
+        container.className = "w-full bg-slate-950/70 border border-amber-500/40 rounded-3xl p-8 md:p-12 shadow-2xl relative overflow-hidden backdrop-blur-2xl transition-all duration-500 glow-amber flex flex-col items-center";
+        badge.className = "px-4 py-1.5 rounded-full text-xs font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20 uppercase tracking-widest flex items-center gap-2";
+        badge.innerHTML = `<span class="h-2 w-2 rounded-full bg-amber-400"></span> Rest Paused`;
+        ring.className = "absolute inset-0 rounded-3xl border-2 border-amber-500/40 pointer-events-none transition-all duration-500";
+        
+        document.getElementById('pauseBreakBtnLabel').innerText = "Resume Break";
+
+      } else {
+        // IDLE
+        workControls.classList.remove('hidden');
+        workControls.classList.add('grid');
+        breakControls.classList.add('hidden');
+
+        container.className = "w-full bg-slate-950/70 border border-slate-800/80 rounded-3xl p-8 md:p-12 shadow-2xl relative overflow-hidden backdrop-blur-2xl transition-all duration-500 flex flex-col items-center";
+        badge.className = "px-4 py-1.5 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 uppercase tracking-widest flex items-center gap-2";
+        badge.innerHTML = `<span class="h-2 w-2 rounded-full bg-emerald-400"></span> Ready to Focus`;
+        ring.className = "absolute inset-0 rounded-3xl border-2 border-slate-800/80 pointer-events-none transition-all duration-500";
+        subtitle.innerText = "Focus Elapsed";
+        pauseNotice.classList.add('opacity-0');
+
+        btnStart.disabled = false;
+        btnStart.classList.remove('opacity-50');
+        btnPause.disabled = true;
+        btnStop.disabled = true;
+        pauseBtnLabel.innerText = "Pause";
+      }
+    }
+
+    function renderTimeGrid() {
+      const container = document.getElementById('timeGridRows');
+      if (!container) return;
+      container.innerHTML = '';
+
+      for (let hour = 0; hour < 24; hour++) {
+        const row = document.createElement('div');
+        row.className = "h-[48px] border-b border-slate-800/40 flex items-start text-[10px] font-mono text-slate-500";
+        
+        const hourFormatted = hour === 0 ? '12 AM' : hour < 12 ? `${hour} AM` : hour === 12 ? '12 PM' : `${hour - 12} PM`;
+        row.innerHTML = `<div class="w-12 -mt-2 pr-2 text-right">${hourFormatted}</div>`;
+        container.appendChild(row);
+      }
+    }
+
+    function updateWeekCalendar() {
+      const monday = getMonday(new Date());
+      monday.setDate(monday.getDate() + (state.currentWeekOffset * 7));
+
+      const sunday = new Date(monday);
+      sunday.setDate(sunday.getDate() + 6);
+
+      const formatOption = { month: 'short', day: 'numeric' };
+      document.getElementById('weekRangeLabel').innerText = `${monday.toLocaleDateString('en-US', formatOption)} – ${sunday.toLocaleDateString('en-US', formatOption)}, ${monday.getFullYear()}`;
+
+      const today = new Date();
+      for (let i = 0; i < 7; i++) {
+        const colDate = new Date(monday);
+        colDate.setDate(colDate.getDate() + i);
+
+        const dayCol = document.getElementById(`dayCol-${i}`);
+        if (dayCol) {
+          const numSpan = dayCol.querySelector('.date-num');
+          numSpan.innerText = colDate.getDate();
+
+          const isToday = colDate.toDateString() === today.toDateString();
+          if (isToday) {
+            numSpan.className = "date-num text-sm text-slate-950 font-extrabold bg-emerald-400 px-2 py-0.5 rounded-full shadow-lg shadow-emerald-500/20 mt-1";
+          } else {
+            numSpan.className = "date-num text-sm text-slate-200 font-bold mt-1";
+          }
+        }
+
+        const eventCol = document.getElementById(`eventCol-${i}`);
+        if (eventCol) eventCol.innerHTML = '';
+      }
+
+      renderSessionsOnCalendar(monday, sunday);
+    }
+
+    function renderSessionsOnCalendar(weekStart, weekEnd) {
+      weekStart.setHours(0,0,0,0);
+      weekEnd.setHours(23,59,59,999);
+
+      state.sessions.forEach(sess => {
+        const start = new Date(sess.startTime);
+        const end = new Date(sess.endTime);
+
+        if (start >= weekStart && start <= weekEnd) {
+          let dayIdx = start.getDay() - 1;
+          if (dayIdx === -1) dayIdx = 6;
+
+          const col = document.getElementById(`eventCol-${dayIdx}`);
+          if (!col) return;
+
+          const startMinutes = start.getHours() * 60 + start.getMinutes();
+          const durationMinutes = Math.max(5, Math.round(sess.durationMs / 60000));
+
+          const topPx = (startMinutes / 60) * 48;
+          const heightPx = Math.max(22, (durationMinutes / 60) * 48);
+
+          const block = document.createElement('div');
+          block.className = "absolute left-1 right-1 rounded-xl bg-emerald-500/25 border border-emerald-400/60 p-1.5 text-[10px] text-emerald-200 font-medium overflow-hidden shadow-lg hover:bg-emerald-500/40 hover:scale-[1.02] transition cursor-pointer backdrop-blur-md z-10";
+          block.style.top = `${topPx}px`;
+          block.style.height = `${heightPx}px`;
+
+          const startStr = start.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+          const endStr = end.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+
+          block.onclick = (e) => {
+            e.stopPropagation();
+            openEventModal(sess);
+          };
+
+          block.innerHTML = `
+            <div class="font-bold text-white flex items-center justify-between text-[10px] leading-tight">
+              <span>Focus</span>
+              <i class="fa-solid fa-circle-info text-[9px] text-emerald-300 opacity-80"></i>
+            </div>
+            <div class="font-mono text-[9px] text-emerald-200/90 mt-0.5 truncate">${startStr} - ${endStr}</div>
+          `;
+
+          col.appendChild(block);
+        }
+      });
+    }
+
+    function openEventModal(sess) {
+      state.selectedSessionId = sess.id;
+      const start = new Date(sess.startTime);
+      const end = new Date(sess.endTime);
+
+      const startStr = start.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+      const endStr = end.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+      const dateStr = start.toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' });
+
+      document.getElementById('modalTimeRange').innerText = `${startStr} – ${endStr}`;
+      document.getElementById('modalDateString').innerText = dateStr;
+      
+      const mins = Math.round(sess.durationMs / 60000);
+      document.getElementById('modalDuration').innerText = `${mins} min${mins === 1 ? '' : 's'}`;
+      document.getElementById('modalPauses').innerText = `${sess.pauseCount || 0} pause(s)`;
+
+      document.getElementById('modalDeleteBtn').onclick = () => {
+        deleteSession(sess.id);
+        closeEventModal();
+      };
+
+      document.getElementById('eventDetailsModal').classList.remove('hidden');
+    }
+
+    function closeEventModal() {
+      document.getElementById('eventDetailsModal').classList.add('hidden');
+      state.selectedSessionId = null;
+    }
+
+    function changeWeek(delta) {
+      state.currentWeekOffset += delta;
+      updateWeekCalendar();
+    }
+
+    function resetToCurrentWeek() {
+      state.currentWeekOffset = 0;
+      updateWeekCalendar();
+    }
+
+    function deleteSession(sessId) {
+      state.sessions = state.sessions.filter(s => s.id !== sessId);
+      localStorage.setItem('flowmo_sessions_log', JSON.stringify(state.sessions));
+      updateWeekCalendar();
+      updateStatsHeader();
+    }
+
+    function clearWeekDataModal() {
+      if (confirm("Are you sure you want to clear your entire study log history?")) {
+        state.sessions = [];
+        localStorage.removeItem('flowmo_sessions_log');
+        updateWeekCalendar();
+        updateStatsHeader();
+      }
+    }
+
+    function updateStatsHeader() {
+      const now = new Date();
+      const todayStr = now.toDateString();
+
+      const monday = getMonday(now);
+      monday.setHours(0,0,0,0);
+      const sunday = new Date(monday);
+      sunday.setDate(sunday.getDate() + 6);
+      sunday.setHours(23,59,59,999);
+
+      let todayMs = 0;
+      let weekMs = 0;
+
+      state.sessions.forEach(sess => {
+        const start = new Date(sess.startTime);
+        if (start.toDateString() === todayStr) {
+          todayMs += sess.durationMs;
+        }
+        if (start >= monday && start <= sunday) {
+          weekMs += sess.durationMs;
+        }
+      });
+
+      document.getElementById('sidebarTodayFocus').innerText = formatMsShort(todayMs);
+      document.getElementById('sidebarWeekFocus').innerText = formatMsShort(weekMs);
+    }
+
+    function getMonday(d) {
+      const date = new Date(d);
+      const day = date.getDay();
+      const diff = date.getDate() - day + (day === 0 ? -6 : 1);
+      return new Date(date.setDate(diff));
+    }
+
+    function toggleRatioSettings() {
+      const modal = document.getElementById('settingsModal');
+      modal.classList.toggle('hidden');
+    }
+
+    function saveRatioSettings() {
+      const val = parseInt(document.getElementById('ratioSelect').value);
+      state.divisor = val;
+      localStorage.setItem('flowmo_ratio', val);
+      updateRatioBadge();
+      toggleRatioSettings();
+    }
+
+    function updateRatioBadge() {
+      document.getElementById('currentRatioBadge').innerText = `1 : ${state.divisor} (${Math.round(100/state.divisor)}%)`;
+      document.getElementById('sidebarRatioText').innerText = `1:${state.divisor}`;
+    }
+
+    function formatMs(ms) {
+      const sec = Math.floor((ms / 1000) % 60);
+      const min = Math.floor((ms / (1000 * 60)) % 60);
+      const hrs = Math.floor(ms / (1000 * 60 * 60));
+      return `${hrs.toString().padStart(2, '0')}:${min.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
+    }
+
+    function formatSec(seconds) {
+      const min = Math.floor(seconds / 60);
+      const sec = seconds % 60;
+      return `${min.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
+    }
+
+    function formatMsShort(ms) {
+      const min = Math.floor((ms / (1000 * 60)) % 60);
+      const hrs = Math.floor(ms / (1000 * 60 * 60));
+      return `${hrs}h ${min}m`;
+    }
+
+    function playChimeSound() {
+      try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(587.33, audioCtx.currentTime);
+        osc.frequency.setValueAtTime(880, audioCtx.currentTime + 0.15);
+        gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.8);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.8);
+      } catch(e) {}
+    }
+  </script>
+</body>
+</html>
