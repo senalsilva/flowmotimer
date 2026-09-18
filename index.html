@@ -421,9 +421,11 @@
       activeTab: 'timer',
       mode: 'IDLE', // 'WORK_RUNNING', 'WORK_PAUSED', 'BREAK_RUNNING', 'BREAK_PAUSED'
       workStartTime: null,
-      workElapsedMs: 0,
+      accumulatedWorkMs: 0,
+      lastWorkStartTimestamp: null,
       breakTotalSec: 0,
       breakRemainingSec: 0,
+      breakEndTimestamp: null,
       pauseCount: 0,
       divisor: parseInt(localStorage.getItem('flowmo_ratio') || '5'),
       currentWeekOffset: 0,
@@ -442,6 +444,14 @@
       if (scrollContainer) {
         scrollContainer.scrollTop = 8 * 48; // Scroll to 8 AM default
       }
+
+      // Automatically resync timer when laptop wakes up or tab regains focus
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) tickTimer();
+      });
+      window.addEventListener('focus', () => {
+        tickTimer();
+      });
     });
 
     function switchTab(tabName) {
@@ -467,44 +477,80 @@
       }
     }
 
+    function getWorkElapsedMs() {
+      if (state.mode === 'WORK_RUNNING' && state.lastWorkStartTimestamp) {
+        return state.accumulatedWorkMs + (Date.now() - state.lastWorkStartTimestamp);
+      }
+      return state.accumulatedWorkMs;
+    }
+
+    function getBreakRemainingSec() {
+      if (state.mode === 'BREAK_RUNNING' && state.breakEndTimestamp) {
+        const diffSec = Math.ceil((state.breakEndTimestamp - Date.now()) / 1000);
+        return Math.max(0, diffSec);
+      }
+      return state.breakRemainingSec;
+    }
+
+    function tickTimer() {
+      if (state.mode === 'WORK_RUNNING') {
+        const elapsedMs = getWorkElapsedMs();
+        document.getElementById('mainTimerDisplay').innerText = formatMs(elapsedMs);
+        
+        const earnedBreakSec = Math.floor((elapsedMs / 1000) / state.divisor);
+        document.getElementById('calculatedBreakTime').innerText = formatSec(earnedBreakSec);
+      } else if (state.mode === 'BREAK_RUNNING') {
+        const remainingSec = getBreakRemainingSec();
+        document.getElementById('mainTimerDisplay').innerText = formatSec(remainingSec);
+
+        if (remainingSec <= 0) {
+          clearInterval(state.timerInterval);
+          state.timerInterval = null;
+          playChimeSound();
+          alert("🎉 Rest time complete! Ready to start your next focus session?");
+          resetToIdle();
+        }
+      }
+    }
+
     function startWorkTimer() {
       if (state.mode === 'WORK_RUNNING') return;
 
+      const now = Date.now();
       if (state.mode === 'IDLE') {
         state.workStartTime = new Date();
-        state.workElapsedMs = 0;
+        state.accumulatedWorkMs = 0;
         state.pauseCount = 0;
         document.getElementById('sessionStartTimeDisplay').innerText = state.workStartTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       }
 
+      state.lastWorkStartTimestamp = now;
       state.mode = 'WORK_RUNNING';
       updateTimerUI();
 
       if (state.timerInterval) clearInterval(state.timerInterval);
-
-      state.timerInterval = setInterval(() => {
-        state.workElapsedMs += 1000;
-        document.getElementById('mainTimerDisplay').innerText = formatMs(state.workElapsedMs);
-        
-        const earnedBreakSec = Math.floor((state.workElapsedMs / 1000) / state.divisor);
-        document.getElementById('calculatedBreakTime').innerText = formatSec(earnedBreakSec);
-      }, 1000);
+      tickTimer();
+      state.timerInterval = setInterval(tickTimer, 1000);
     }
 
     function pauseWorkTimer() {
       if (state.mode === 'WORK_RUNNING') {
+        state.accumulatedWorkMs += (Date.now() - state.lastWorkStartTimestamp);
+        state.lastWorkStartTimestamp = null;
         state.mode = 'WORK_PAUSED';
         state.pauseCount++;
         clearInterval(state.timerInterval);
         state.timerInterval = null;
         updateTimerUI();
+        tickTimer();
       } else if (state.mode === 'WORK_PAUSED') {
         startWorkTimer();
       }
     }
 
     function triggerBreakMode() {
-      if (state.workElapsedMs < 10000) {
+      const elapsedMs = getWorkElapsedMs();
+      if (elapsedMs < 10000) {
         alert("Work session is too short to log (must be at least 10 seconds).");
         return;
       }
@@ -512,20 +558,20 @@
       clearInterval(state.timerInterval);
       
       const endTime = new Date();
-      const startTime = state.workStartTime || new Date(endTime.getTime() - state.workElapsedMs);
+      const startTime = state.workStartTime || new Date(endTime.getTime() - elapsedMs);
 
       const sessionObj = {
         id: 'sess_' + Date.now(),
         startTime: startTime.toISOString(),
         endTime: endTime.toISOString(),
-        durationMs: state.workElapsedMs,
+        durationMs: elapsedMs,
         pauseCount: state.pauseCount
       };
 
       state.sessions.push(sessionObj);
       localStorage.setItem('flowmo_sessions_log', JSON.stringify(state.sessions));
 
-      state.breakTotalSec = Math.floor((state.workElapsedMs / 1000) / state.divisor);
+      state.breakTotalSec = Math.floor((elapsedMs / 1000) / state.divisor);
       state.breakRemainingSec = state.breakTotalSec;
 
       if (state.breakRemainingSec <= 0) {
@@ -535,42 +581,31 @@
         return;
       }
 
+      state.breakEndTimestamp = Date.now() + (state.breakRemainingSec * 1000);
       state.mode = 'BREAK_RUNNING';
       updateTimerUI();
       updateWeekCalendar();
       updateStatsHeader();
 
-      state.timerInterval = setInterval(() => {
-        if (state.breakRemainingSec > 0) {
-          state.breakRemainingSec--;
-          document.getElementById('mainTimerDisplay').innerText = formatSec(state.breakRemainingSec);
-        } else {
-          playChimeSound();
-          alert("🎉 Rest time complete! Ready to start your next focus session?");
-          resetToIdle();
-        }
-      }, 1000);
+      tickTimer();
+      state.timerInterval = setInterval(tickTimer, 1000);
     }
 
     function pauseBreakTimer() {
       if (state.mode === 'BREAK_RUNNING') {
+        state.breakRemainingSec = getBreakRemainingSec();
+        state.breakEndTimestamp = null;
         state.mode = 'BREAK_PAUSED';
         clearInterval(state.timerInterval);
         state.timerInterval = null;
         updateTimerUI();
       } else if (state.mode === 'BREAK_PAUSED') {
+        state.breakEndTimestamp = Date.now() + (state.breakRemainingSec * 1000);
         state.mode = 'BREAK_RUNNING';
         updateTimerUI();
-        state.timerInterval = setInterval(() => {
-          if (state.breakRemainingSec > 0) {
-            state.breakRemainingSec--;
-            document.getElementById('mainTimerDisplay').innerText = formatSec(state.breakRemainingSec);
-          } else {
-            playChimeSound();
-            alert("🎉 Rest time complete! Ready to start your next focus session?");
-            resetToIdle();
-          }
-        }, 1000);
+        if (state.timerInterval) clearInterval(state.timerInterval);
+        tickTimer();
+        state.timerInterval = setInterval(tickTimer, 1000);
       }
     }
 
@@ -582,9 +617,11 @@
       clearInterval(state.timerInterval);
       state.timerInterval = null;
       state.mode = 'IDLE';
-      state.workElapsedMs = 0;
+      state.accumulatedWorkMs = 0;
+      state.lastWorkStartTimestamp = null;
       state.workStartTime = null;
       state.breakRemainingSec = 0;
+      state.breakEndTimestamp = null;
       state.pauseCount = 0;
 
       document.getElementById('mainTimerDisplay').innerText = "00:00:00";
