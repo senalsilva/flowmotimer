@@ -1,0 +1,1293 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-950 text-slate-100 dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Flowmodoro Task & Focus Engine</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Serif+Display&family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700;800&family=Lexend:wght@300;400;500;600;700;800&family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Plus Jakarta Sans', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+            tall: ['Bebas Neue', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    :root {
+      --theme-primary: #22c55e;
+      --theme-primary-hover: #4ade80;
+      --theme-primary-rgb: 34, 197, 94;
+      --theme-secondary: #14b8a6;
+      --theme-secondary-rgb: 20, 184, 166;
+      --theme-bg-base: #0b0f19;
+      --theme-card-bg: rgba(2, 6, 23, 0.7);
+      --theme-card-border: rgba(30, 41, 59, 0.8);
+      --theme-sidebar-bg: rgba(2, 6, 23, 0.85);
+      --theme-text-main: #f8fafc;
+      --theme-glow: rgba(34, 197, 94, 0.28);
+      --font-body: 'Plus Jakarta Sans', sans-serif;
+      --font-timer: 'Bebas Neue', sans-serif;
+    }
+
+    body {
+      font-family: var(--font-body) !important;
+      color: var(--theme-text-main) !important;
+    }
+
+    .theme-app-bg { background-color: var(--theme-bg-base) !important; }
+    .theme-card {
+      background-color: var(--theme-card-bg) !important;
+      border-color: var(--theme-card-border) !important;
+    }
+    .theme-sidebar {
+      background-color: var(--theme-sidebar-bg) !important;
+      border-color: var(--theme-card-border) !important;
+    }
+    .theme-primary-bg { background-color: var(--theme-primary) !important; }
+    .theme-primary-text { color: var(--theme-primary) !important; }
+    .theme-secondary-text { color: var(--theme-secondary) !important; }
+    .theme-primary-border { border-color: var(--theme-primary) !important; }
+    .font-timer-custom { font-family: var(--font-timer) !important; }
+    .glow-theme { box-shadow: 0 0 70px -5px var(--theme-glow) !important; }
+
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: rgba(9, 13, 22, 0.6); }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.15); border-radius: 4px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.3); }
+    
+    .bg-pixel-rain {
+      background-color: var(--theme-bg-base);
+      background-image: 
+        radial-gradient(at 50% 0%, var(--theme-glow) 0px, transparent 70%),
+        radial-gradient(at 100% 100%, rgba(var(--theme-secondary-rgb), 0.15) 0px, transparent 60%);
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      background-attachment: fixed;
+    }
+
+    @keyframes pulse-ring {
+      0% { transform: scale(0.98); opacity: 0.9; }
+      50% { transform: scale(1.02); opacity: 0.4; }
+      100% { transform: scale(0.98); opacity: 0.9; }
+    }
+    .timer-ring-active { animation: pulse-ring 3s infinite ease-in-out; }
+  </style>
+</head>
+<body class="h-full font-sans antialiased text-slate-100 flex bg-pixel-rain selection:bg-emerald-500 selection:text-slate-950 overflow-hidden relative">
+
+  <!-- Background Dark Atmosphere Overlay -->
+  <div class="fixed inset-0 bg-slate-950/75 backdrop-blur-[2px] pointer-events-none z-0"></div>
+
+  <div class="relative z-10 flex w-full h-full overflow-hidden">
+
+    <!-- CONDENSED ICON-ONLY SIDEBAR -->
+    <aside class="w-16 md:w-16 theme-sidebar border-r backdrop-blur-2xl flex flex-col items-center justify-between py-5 shrink-0 transition-all z-30">
+      
+      <!-- Top Section: Logo & Navigation Icons -->
+      <div class="flex flex-col items-center gap-6 w-full px-2">
+        <div class="h-10 w-10 rounded-2xl theme-primary-bg flex items-center justify-center text-slate-950 font-black text-xl shadow-lg shrink-0 cursor-pointer" title="Flowmodoro">
+          <i class="fa-solid fa-hourglass-half text-base"></i>
+        </div>
+
+        <div class="w-8 h-[1px] bg-slate-800/80 my-1"></div>
+
+        <nav class="flex flex-col items-center gap-3 w-full">
+          <button id="navTabTimer" onclick="switchTab('timer')" class="h-11 w-11 rounded-2xl flex items-center justify-center transition theme-primary-text bg-emerald-500/15 border border-emerald-500/30 shadow-lg group relative" title="Timer View">
+            <i class="fa-solid fa-stopwatch text-lg"></i>
+            <span class="absolute left-14 bg-slate-900 border border-slate-800 text-slate-200 text-xs font-semibold px-2.5 py-1 rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none transition whitespace-nowrap shadow-xl z-50">Timer View</span>
+          </button>
+
+          <button id="navTabTasks" onclick="toggleTaskDrawer()" class="h-11 w-11 rounded-2xl flex items-center justify-center transition text-slate-400 hover:text-slate-200 hover:bg-slate-900/80 border border-transparent group relative" title="Task Backlog">
+            <i class="fa-solid fa-list-check text-lg"></i>
+            <span class="absolute left-14 bg-slate-900 border border-slate-800 text-slate-200 text-xs font-semibold px-2.5 py-1 rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none transition whitespace-nowrap shadow-xl z-50">Task Drawer</span>
+          </button>
+
+          <button id="navTabCalendar" onclick="switchTab('calendar')" class="h-11 w-11 rounded-2xl flex items-center justify-center transition text-slate-400 hover:text-slate-200 hover:bg-slate-900/80 border border-transparent group relative" title="Weekly Log">
+            <i class="fa-regular fa-calendar-days text-lg"></i>
+            <span class="absolute left-14 bg-slate-900 border border-slate-800 text-slate-200 text-xs font-semibold px-2.5 py-1 rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none transition whitespace-nowrap shadow-xl z-50">Weekly Schedule & Log</span>
+          </button>
+        </nav>
+      </div>
+
+      <!-- Bottom Section: Settings Icon -->
+      <div class="flex flex-col items-center gap-3 w-full px-2">
+        <button onclick="toggleRatioSettings()" class="h-10 w-10 rounded-xl bg-slate-900/90 border border-slate-800 hover:bg-slate-800 theme-primary-text transition flex items-center justify-center group relative" title="Settings & Themes">
+          <i class="fa-solid fa-sliders text-sm"></i>
+          <span class="absolute left-14 bg-slate-900 border border-slate-800 text-slate-200 text-xs font-semibold px-2.5 py-1 rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none transition whitespace-nowrap shadow-xl z-50">
+            Settings & Themes
+          </span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- SLIDE-OUT SMART TASK DRAWER -->
+    <div id="taskDrawer" class="fixed inset-y-0 left-16 z-20 w-80 sm:w-96 bg-slate-950/95 border-r border-slate-800 backdrop-blur-2xl transform -translate-x-full transition-transform duration-300 ease-in-out flex flex-col shadow-2xl">
+      <div class="p-5 border-b border-slate-800/80 flex items-center justify-between bg-slate-900/40">
+        <div class="flex items-center gap-2">
+          <i class="fa-solid fa-list-check theme-primary-text"></i>
+          <h2 class="font-extrabold text-sm uppercase tracking-wider text-white">Smart Task Drawer</h2>
+        </div>
+        <button onclick="toggleTaskDrawer()" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition">
+          <i class="fa-solid fa-xmark text-base"></i>
+        </button>
+      </div>
+
+      <!-- Task Backlog List -->
+      <div class="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-3" id="taskListContainer">
+        <!-- Rendered via JavaScript -->
+      </div>
+
+      <!-- Quick Add Task Button Footer -->
+      <div class="p-4 border-t border-slate-800 bg-slate-900/60 space-y-2">
+        <button onclick="openAddTaskModal()" class="w-full py-3 theme-primary-bg text-slate-950 font-extrabold rounded-2xl text-xs flex items-center justify-center gap-2 shadow-lg hover:opacity-90 transition">
+          <i class="fa-solid fa-plus"></i>
+          <span>Add New Task</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- RIGHT MAIN CONTENT AREA -->
+    <main class="flex-1 h-full overflow-y-auto custom-scrollbar p-4 md:p-8 flex flex-col">
+
+      <!-- TAB 1: TIMER VIEW -->
+      <div id="tabContentTimer" class="max-w-4xl w-full mx-auto my-auto py-6 flex flex-col items-center justify-center space-y-6">
+        
+        <div id="timerCardContainer" class="w-full theme-card border rounded-3xl p-8 md:p-12 shadow-2xl relative overflow-hidden backdrop-blur-2xl transition-all duration-500 glow-theme flex flex-col items-center">
+          
+          <!-- Top Bar on Card -->
+          <div class="w-full flex flex-wrap items-center justify-between gap-3 mb-4">
+            <span id="timerStatusBadge" class="px-4 py-1.5 rounded-full text-xs font-bold bg-emerald-500/10 theme-primary-text border border-emerald-500/20 uppercase tracking-widest flex items-center gap-2">
+              <span class="h-2 w-2 rounded-full theme-primary-bg animate-ping"></span>
+              <span>Focus Flow</span>
+            </span>
+
+            <!-- Task Selector Banner -->
+            <div class="flex-1 max-w-xs mx-auto text-center">
+              <select id="activeTaskSelect" onchange="onSelectedTaskChange()" class="bg-slate-900/90 border border-slate-800 text-xs font-semibold text-slate-200 rounded-xl px-3 py-1.5 focus:outline-none focus:border-emerald-500 w-full truncate">
+                <option value="">-- Working on Unassigned Task --</option>
+              </select>
+            </div>
+
+            <div class="flex items-center gap-3">
+              <span class="hidden sm:inline text-xs font-mono text-slate-400 bg-slate-900/60 px-3 py-1.5 rounded-xl border border-slate-800/80">
+                Today: <strong id="sidebarTodayFocus" class="theme-primary-text">0h 0m</strong>
+              </span>
+              <span id="breakEarnedTag" class="text-xs md:text-sm font-mono font-semibold text-slate-300 bg-slate-900/90 px-4 py-2 rounded-2xl border border-slate-800/80 shadow-inner">
+                Earned Break: <strong id="calculatedBreakTime" class="theme-secondary-text font-bold">00:00</strong>
+              </span>
+            </div>
+          </div>
+
+          <!-- Active Task Progress Bar (If attached) -->
+          <div id="activeTaskProgressContainer" class="w-full max-w-lg mb-2 hidden">
+            <div class="flex justify-between text-[11px] font-semibold text-slate-400 mb-1">
+              <span id="activeTaskTitleLabel" class="truncate font-mono">Task Progress</span>
+              <span id="activeTaskUnitsLabel" class="font-mono theme-primary-text">0 / 0 Flowmodoros</span>
+            </div>
+            <div class="w-full h-2 bg-slate-900 rounded-full overflow-hidden border border-slate-800">
+              <div id="activeTaskProgressBar" class="h-full theme-primary-bg transition-all duration-300" style="width: 0%"></div>
+            </div>
+          </div>
+
+          <!-- Timer Clock -->
+          <div class="relative w-full my-2 flex flex-col items-center justify-center">
+            <div id="ringBorderEffect" class="absolute inset-0 rounded-3xl border-2 theme-primary-border opacity-40 timer-ring-active pointer-events-none transition-all duration-500"></div>
+
+            <span id="timerSubtitle" class="text-xs md:text-sm font-bold uppercase tracking-widest opacity-80 mt-6 mb-2">Focus Elapsed</span>
+            
+            <div id="mainTimerDisplay" class="font-timer-custom text-7xl sm:text-9xl md:text-[11rem] font-extrabold tracking-wider drop-shadow-[0_10px_20px_rgba(0,0,0,0.8)] leading-none my-2 select-none min-h-[1em] flex items-center justify-center">
+              00:00:00
+            </div>
+
+            <div id="pausedNotice" class="mb-4 text-xs font-semibold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-4 py-1 rounded-full opacity-0 transition-opacity">
+              <i class="fa-solid fa-pause text-[10px] mr-1"></i> Paused
+            </div>
+          </div>
+
+          <!-- Controls -->
+          <div class="w-full max-w-xl space-y-3 mt-4">
+            
+            <div id="workControls" class="grid grid-cols-3 gap-3 md:gap-4">
+              <button id="btnStartWork" onclick="startWorkTimer()" class="py-4 px-4 sm:px-6 theme-primary-bg text-slate-950 font-black rounded-2xl text-xs sm:text-sm md:text-base flex items-center justify-center gap-2 shadow-xl hover:scale-[1.02] active:scale-[0.98] transition min-w-0">
+                <i class="fa-solid fa-play shrink-0"></i>
+                <span class="truncate">Start Flow</span>
+              </button>
+
+              <button id="btnPauseWork" onclick="pauseWorkTimer()" disabled class="py-4 px-4 sm:px-6 bg-slate-900/90 hover:bg-slate-800 disabled:opacity-40 text-amber-400 font-bold rounded-2xl text-xs sm:text-sm md:text-base flex items-center justify-center gap-2 border border-slate-700/80 transition min-w-0">
+                <i class="fa-solid fa-pause shrink-0"></i>
+                <span id="pauseBtnLabel" class="truncate">Pause</span>
+              </button>
+
+              <button id="btnStopAndBreak" onclick="triggerBreakMode()" disabled class="py-4 px-4 sm:px-6 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white font-bold rounded-2xl text-xs sm:text-sm md:text-base flex items-center justify-center gap-2 shadow-xl shadow-indigo-600/25 transition min-w-0">
+                <i class="fa-solid fa-mug-hot shrink-0"></i>
+                <span class="truncate">Rest Now</span>
+              </button>
+            </div>
+
+            <div id="breakControls" class="hidden grid-cols-2 gap-3 md:gap-4">
+              <button id="btnPauseBreak" onclick="pauseBreakTimer()" class="py-4 px-6 bg-slate-900/90 hover:bg-slate-800 text-amber-400 font-bold rounded-2xl text-sm md:text-base flex items-center justify-center gap-2 border border-slate-700/80 transition">
+                <i class="fa-solid fa-pause"></i>
+                <span id="pauseBreakBtnLabel">Pause Break</span>
+              </button>
+
+              <button onclick="skipBreakAndReset()" class="py-4 px-6 bg-slate-900/90 hover:bg-slate-800 text-slate-300 font-bold rounded-2xl text-sm md:text-base flex items-center justify-center gap-2 border border-slate-700/80 transition">
+                <i class="fa-solid fa-forward-step"></i>
+                <span>End Rest</span>
+              </button>
+            </div>
+
+          </div>
+
+          <!-- Bottom Session Summary -->
+          <div class="w-full max-w-xl mt-8 pt-6 border-t border-slate-800/80 grid grid-cols-3 gap-3 text-center text-xs">
+            <div class="bg-slate-900/60 p-3 rounded-2xl border border-slate-800/80">
+              <span class="text-slate-400 block text-[10px] font-semibold uppercase">Started At</span>
+              <span id="sessionStartTimeDisplay" class="font-mono text-slate-200 font-bold">--:--</span>
+            </div>
+            <div class="bg-slate-900/60 p-3 rounded-2xl border border-slate-800/80">
+              <span class="text-slate-400 block text-[10px] font-semibold uppercase">Pauses Logged</span>
+              <span id="sessionPauseCount" class="font-mono text-amber-400 font-bold">0 breaks</span>
+            </div>
+            <div class="bg-slate-900/60 p-3 rounded-2xl border border-slate-800/80">
+              <span class="text-slate-400 block text-[10px] font-semibold uppercase">Break Ratio</span>
+              <span id="currentRatioBadge" class="font-mono theme-primary-text font-bold">1 : 5 (20%)</span>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- TAB 2: WEEKLY LOG & ALLOCATION CALENDAR -->
+      <div id="tabContentCalendar" class="hidden max-w-[1500px] w-full mx-auto space-y-6">
+
+        <div class="theme-card border rounded-3xl p-6 shadow-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 backdrop-blur-xl">
+          <div>
+            <h2 class="text-lg font-extrabold flex items-center gap-2">
+              <i class="fa-regular fa-calendar-days theme-primary-text"></i>
+              Weekly Allocation & Focus Log
+            </h2>
+            <p id="weekRangeLabel" class="text-xs text-slate-400 mt-1 font-medium">Loading current week dates...</p>
+          </div>
+
+          <div class="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
+            <span class="text-xs font-mono text-slate-400 bg-slate-900 px-3 py-2 rounded-2xl border border-slate-800 hidden md:inline">
+              Week Total: <strong id="sidebarWeekFocus" class="theme-secondary-text">0h 0m</strong>
+            </span>
+
+            <div class="inline-flex rounded-2xl bg-slate-900 p-1 border border-slate-800 text-xs">
+              <button onclick="changeWeek(-1)" class="px-3 py-2 hover:bg-slate-800 rounded-xl text-slate-400 hover:text-white transition" title="Previous Week">
+                <i class="fa-solid fa-chevron-left"></i>
+              </button>
+              <button onclick="resetToCurrentWeek()" class="px-4 py-2 hover:bg-slate-800 rounded-xl text-slate-200 font-bold transition">
+                Today
+              </button>
+              <button onclick="changeWeek(1)" class="px-3 py-2 hover:bg-slate-800 rounded-xl text-slate-400 hover:text-white transition" title="Next Week">
+                <i class="fa-solid fa-chevron-right"></i>
+              </button>
+            </div>
+
+            <button onclick="clearWeekDataModal()" class="p-3 rounded-2xl bg-slate-900 border border-slate-800 hover:bg-rose-950/50 hover:border-rose-800 text-slate-400 hover:text-rose-400 transition text-xs" title="Clear log history">
+              <i class="fa-solid fa-trash-can"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="theme-card border rounded-3xl p-5 shadow-2xl overflow-hidden backdrop-blur-xl flex flex-col h-[700px]">
+          <div class="grid grid-cols-8 border-b border-slate-800/80 text-center text-xs font-semibold pb-4 text-slate-400">
+            <div class="text-[10px] text-slate-500 uppercase flex items-center justify-center font-mono">Time</div>
+            <div id="dayCol-0" class="flex flex-col items-center"><span class="text-[10px] uppercase font-mono">Mon</span><span class="date-num text-sm font-bold mt-1">--</span></div>
+            <div id="dayCol-1" class="flex flex-col items-center"><span class="text-[10px] uppercase font-mono">Tue</span><span class="date-num text-sm font-bold mt-1">--</span></div>
+            <div id="dayCol-2" class="flex flex-col items-center"><span class="text-[10px] uppercase font-mono">Wed</span><span class="date-num text-sm font-bold mt-1">--</span></div>
+            <div id="dayCol-3" class="flex flex-col items-center"><span class="text-[10px] uppercase font-mono">Thu</span><span class="date-num text-sm font-bold mt-1">--</span></div>
+            <div id="dayCol-4" class="flex flex-col items-center"><span class="text-[10px] uppercase font-mono">Fri</span><span class="date-num text-sm font-bold mt-1">--</span></div>
+            <div id="dayCol-5" class="flex flex-col items-center"><span class="text-[10px] uppercase font-mono">Sat</span><span class="date-num text-sm font-bold mt-1">--</span></div>
+            <div id="dayCol-6" class="flex flex-col items-center"><span class="text-[10px] uppercase font-mono">Sun</span><span class="date-num text-sm font-bold mt-1">--</span></div>
+          </div>
+
+          <div id="calendarScrollContainer" class="flex-1 overflow-y-auto custom-scrollbar relative mt-2">
+            <div class="relative min-h-[1152px]">
+              <div id="timeGridRows" class="absolute inset-0 flex flex-col pointer-events-none"></div>
+
+              <div class="absolute inset-0 grid grid-cols-8">
+                <div class="border-r border-slate-800/40"></div>
+                <div id="eventCol-0" class="relative border-r border-slate-800/40" onclick="onCalendarCellClick(0, event)"></div>
+                <div id="eventCol-1" class="relative border-r border-slate-800/40" onclick="onCalendarCellClick(1, event)"></div>
+                <div id="eventCol-2" class="relative border-r border-slate-800/40" onclick="onCalendarCellClick(2, event)"></div>
+                <div id="eventCol-3" class="relative border-r border-slate-800/40" onclick="onCalendarCellClick(3, event)"></div>
+                <div id="eventCol-4" class="relative border-r border-slate-800/40" onclick="onCalendarCellClick(4, event)"></div>
+                <div id="eventCol-5" class="relative border-r border-slate-800/40" onclick="onCalendarCellClick(5, event)"></div>
+                <div id="eventCol-6" class="relative" onclick="onCalendarCellClick(6, event)"></div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </main>
+
+  </div>
+
+<!-- ADD/EDIT TASK MODAL -->
+<div id="addTaskModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+  <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4">
+    <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+      <h3 class="font-bold text-white text-base flex items-center gap-2">
+        <i class="fa-solid fa-list-check theme-primary-text"></i> Create Smart Task
+      </h3>
+      <button onclick="closeAddTaskModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+    </div>
+
+    <form id="taskForm" onsubmit="handleSaveTask(event)" class="space-y-3 text-xs">
+      <div>
+        <label class="block text-slate-400 mb-1 font-bold">Task Title / Name</label>
+        <input type="text" id="taskTitle" required placeholder="e.g. Physics Ch. 4 Problem Set" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-slate-200 focus:border-emerald-500 focus:outline-none font-medium">
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="block text-slate-400 mb-1 font-bold">Category Tag</label>
+          <input type="text" id="taskCategory" placeholder="PHYS101" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-slate-200 focus:border-emerald-500 focus:outline-none">
+        </div>
+        <div>
+          <label class="block text-slate-400 mb-1 font-bold">Est. Flow Units (~30m ea)</label>
+          <input type="number" id="taskEstUnits" min="1" max="20" value="3" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-slate-200 focus:border-emerald-500 focus:outline-none font-mono">
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-slate-400 mb-1 font-bold">Hard Due Date & Time</label>
+        <input type="datetime-local" id="taskDueDate" required class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-slate-200 focus:border-emerald-500 focus:outline-none font-mono">
+      </div>
+
+      <div class="p-3 bg-slate-950 rounded-xl border border-slate-800 space-y-1">
+        <div class="flex items-center justify-between">
+          <span class="text-[11px] font-bold text-amber-400"><i class="fa-solid fa-shield-halved"></i> Apply Planning Fallacy Buffer (+25%)</span>
+          <input type="checkbox" id="taskApplyBuffer" checked class="rounded bg-slate-900 border-slate-800 text-emerald-500 focus:ring-0 cursor-pointer">
+        </div>
+        <p class="text-[10px] text-slate-400">Behavioral research proves humans underestimate task duration by ~25%. We automatically buffer your estimate to prevent schedule collapse.</p>
+      </div>
+
+      <button type="submit" class="w-full py-3 theme-primary-bg text-slate-950 font-bold rounded-xl text-xs transition hover:opacity-90 mt-2">
+        Save Task to Backlog
+      </button>
+    </form>
+  </div>
+</div>
+
+<!-- ALLOCATE TASK TO CALENDAR MODAL -->
+<div id="allocateModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+  <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4">
+    <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+      <h3 class="font-bold text-white text-base flex items-center gap-2">
+        <i class="fa-regular fa-calendar-plus theme-primary-text"></i> Schedule Focus Window
+      </h3>
+      <button onclick="closeAllocateModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+    </div>
+
+    <form id="allocateForm" onsubmit="handleSaveAllocation(event)" class="space-y-3 text-xs">
+      <input type="hidden" id="allocDayIdx">
+      <input type="hidden" id="allocHour">
+
+      <div>
+        <label class="block text-slate-400 mb-1 font-bold">Selected Target Time Slot</label>
+        <div id="allocTimeSlotLabel" class="font-mono text-emerald-400 font-bold bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+          Monday @ 09:00 AM
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-slate-400 mb-1 font-bold">Select Backlog Task</label>
+        <select id="allocTaskId" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-slate-200 focus:border-emerald-500 focus:outline-none">
+          <!-- Populated dynamically -->
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-slate-400 mb-1 font-bold">Allocated Duration (Minutes)</label>
+        <select id="allocDurationMins" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-slate-200 focus:border-emerald-500 focus:outline-none font-mono">
+          <option value="30">30 Mins (1 Flowmodoro)</option>
+          <option value="60" selected>60 Mins (2 Flowmodoros)</option>
+          <option value="90">90 Mins (3 Flowmodoros)</option>
+          <option value="120">120 Mins (4 Flowmodoros)</option>
+        </select>
+      </div>
+
+      <div class="p-3 bg-slate-950/80 rounded-xl border border-slate-800 text-[11px] text-slate-300 italic">
+        <i class="fa-solid fa-quote-left text-slate-500 mr-1"></i>
+        <span>Implementation Intention: "When this focus window arrives, I will execute at least 1 Flowmodoro session without distraction."</span>
+      </div>
+
+      <div class="flex gap-2 pt-2">
+        <button type="submit" class="flex-1 py-3 theme-primary-bg text-slate-950 font-bold rounded-xl text-xs transition hover:opacity-90">
+          Slot Into Schedule
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- SETTINGS & THEME CUSTOMIZER MODAL -->
+<div id="settingsModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+  <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-6 max-h-[90vh] overflow-y-auto custom-scrollbar">
+    <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+      <h3 class="font-bold text-white text-base flex items-center gap-2">
+        <i class="fa-solid fa-palette theme-primary-text"></i> Settings & Themes
+      </h3>
+      <button onclick="toggleRatioSettings()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+    </div>
+
+    <!-- SECTION 1: BREAK RATIO -->
+    <div class="space-y-3 text-xs">
+      <h4 class="font-extrabold text-slate-300 uppercase tracking-wider text-[11px] flex items-center gap-2">
+        <i class="fa-solid fa-hourglass-half theme-primary-text"></i> Flowtime Break Ratio
+      </h4>
+      <div>
+        <select id="ratioSelect" class="w-full bg-slate-950 border border-slate-800 rounded-2xl p-3 text-slate-200 focus:border-emerald-500 focus:outline-none font-medium">
+          <option value="5">1/5th (Standard Flowtime: 25m work = 5m rest)</option>
+          <option value="4">1/4th (20m work = 5m rest)</option>
+          <option value="6">1/6th (30m work = 5m rest)</option>
+          <option value="3">1/3rd (Intense: 15m work = 5m rest)</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="w-full h-[1px] bg-slate-800"></div>
+
+    <!-- SECTION 2: FONT PAIRINGS -->
+    <div class="space-y-3 text-xs">
+      <h4 class="font-extrabold text-slate-300 uppercase tracking-wider text-[11px] flex items-center gap-2">
+        <i class="fa-solid fa-font theme-primary-text"></i> Typography & Font Style
+      </h4>
+      <div class="grid grid-cols-2 gap-2">
+        <button onclick="selectFontPreset('default')" class="p-2.5 rounded-xl border border-slate-800 bg-slate-950 hover:border-slate-600 text-left transition">
+          <div class="font-bold text-slate-200 text-xs">Classic Flow</div>
+          <div class="text-[10px] text-slate-400">Jakarta Sans + Bebas</div>
+        </button>
+        <button onclick="selectFontPreset('japandi')" class="p-2.5 rounded-xl border border-slate-800 bg-slate-950 hover:border-slate-600 text-left transition">
+          <div class="font-bold text-slate-200 text-xs">Japandi Minimal</div>
+          <div class="text-[10px] text-slate-400">Outfit + Space Grotesk</div>
+        </button>
+        <button onclick="selectFontPreset('editorial')" class="p-2.5 rounded-xl border border-slate-800 bg-slate-950 hover:border-slate-600 text-left transition">
+          <div class="font-bold text-slate-200 text-xs">Editorial Arch</div>
+          <div class="text-[10px] text-slate-400">Inter + DM Serif</div>
+        </button>
+        <button onclick="selectFontPreset('modern')" class="p-2.5 rounded-xl border border-slate-800 bg-slate-950 hover:border-slate-600 text-left transition">
+          <div class="font-bold text-slate-200 text-xs">Modern Studio</div>
+          <div class="text-[10px] text-slate-400">Lexend + JetBrains Mono</div>
+        </button>
+      </div>
+    </div>
+
+    <div class="w-full h-[1px] bg-slate-800"></div>
+
+    <!-- SECTION 3: THEME SELECTION & EDITING -->
+    <div class="space-y-4 text-xs">
+      <div class="flex items-center justify-between">
+        <h4 class="font-extrabold text-slate-300 uppercase tracking-wider text-[11px] flex items-center gap-2">
+          <i class="fa-solid fa-wand-magic-sparkles theme-primary-text"></i> Color Schemes & Palettes
+        </h4>
+
+        <div class="flex items-center gap-1.5">
+          <button id="btnUndoTheme" onclick="undoThemeStep()" disabled class="px-2.5 py-1 bg-slate-950 border border-slate-800 rounded-lg text-slate-400 hover:text-white disabled:opacity-30 disabled:pointer-events-none transition flex items-center gap-1 text-[11px]">
+            <i class="fa-solid fa-rotate-left"></i> Undo
+          </button>
+          <button id="btnRedoTheme" onclick="redoThemeStep()" disabled class="px-2.5 py-1 bg-slate-950 border border-slate-800 rounded-lg text-slate-400 hover:text-white disabled:opacity-30 disabled:pointer-events-none transition flex items-center gap-1 text-[11px]">
+            <i class="fa-solid fa-rotate-right"></i> Redo
+          </button>
+        </div>
+      </div>
+
+      <div class="space-y-3">
+        <div>
+          <label class="block text-amber-200/80 text-[10px] font-bold uppercase tracking-wider mb-2">Beige & Interior Themes:</label>
+          <div class="grid grid-cols-3 gap-2">
+            <button onclick="selectPresetTheme('japandi')" class="p-2.5 rounded-xl border border-amber-900/40 bg-slate-950 hover:border-amber-500/50 flex items-center gap-2 text-left group transition">
+              <span class="h-3 w-3 rounded-full bg-[#c29b7f] shrink-0"></span>
+              <span class="text-[11px] font-semibold text-slate-300 group-hover:text-white">Japandi Linen</span>
+            </button>
+            <button onclick="selectPresetTheme('latte')" class="p-2.5 rounded-xl border border-amber-900/40 bg-slate-950 hover:border-amber-500/50 flex items-center gap-2 text-left group transition">
+              <span class="h-3 w-3 rounded-full bg-[#d4a373] shrink-0"></span>
+              <span class="text-[11px] font-semibold text-slate-300 group-hover:text-white">Oat & Latte</span>
+            </button>
+            <button onclick="selectPresetTheme('sandstone')" class="p-2.5 rounded-xl border border-amber-900/40 bg-slate-950 hover:border-amber-500/50 flex items-center gap-2 text-left group transition">
+              <span class="h-3 w-3 rounded-full bg-[#84a98c] shrink-0"></span>
+              <span class="text-[11px] font-semibold text-slate-300 group-hover:text-white">Sandstone</span>
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-2">Accent Schemes:</label>
+          <div class="grid grid-cols-3 gap-2">
+            <button onclick="selectPresetTheme('candyCloud')" class="p-2.5 rounded-xl border border-slate-800 bg-slate-950 hover:border-pink-400/50 flex items-center gap-2 text-left group transition">
+              <span class="h-3 w-3 rounded-full bg-pink-400 shrink-0"></span>
+              <span class="text-[11px] font-semibold text-slate-300 group-hover:text-white">Candy Cloud</span>
+            </button>
+            <button onclick="selectPresetTheme('lofiShores')" class="p-2.5 rounded-xl border border-slate-800 bg-slate-950 hover:border-sky-400/50 flex items-center gap-2 text-left group transition">
+              <span class="h-3 w-3 rounded-full bg-sky-400 shrink-0"></span>
+              <span class="text-[11px] font-semibold text-slate-300 group-hover:text-white">Lofi Shores</span>
+            </button>
+            <button onclick="selectPresetTheme('emerald')" class="p-2.5 rounded-xl border border-slate-800 bg-slate-950 hover:border-emerald-500/50 flex items-center gap-2 text-left group transition">
+              <span class="h-3 w-3 rounded-full bg-emerald-500 shrink-0"></span>
+              <span class="text-[11px] font-semibold text-slate-300 group-hover:text-white">Emerald</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="flex gap-2 pt-2 border-t border-slate-800">
+      <button onclick="saveSettingsAndTheme()" class="flex-1 py-3 theme-primary-bg text-slate-950 font-bold rounded-xl text-xs transition hover:opacity-90">
+        Save Settings & Theme
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const PRESET_THEMES = {
+    emerald: { primary: '#22c55e', secondary: '#14b8a6', bgBase: '#0b0f19', cardBg: 'rgba(2, 6, 23, 0.7)', cardBorder: 'rgba(30, 41, 59, 0.8)', sidebarBg: 'rgba(2, 6, 23, 0.85)', textMain: '#f8fafc', glow: '#22c55e' },
+    japandi: { primary: '#c29b7f', secondary: '#a88a6d', bgBase: '#181513', cardBg: 'rgba(36, 30, 26, 0.82)', cardBorder: 'rgba(74, 62, 53, 0.8)', sidebarBg: 'rgba(24, 20, 17, 0.92)', textMain: '#f7f4f0', glow: '#c29b7f' },
+    latte: { primary: '#d4a373', secondary: '#e9edc9', bgBase: '#161311', cardBg: 'rgba(36, 31, 27, 0.85)', cardBorder: 'rgba(82, 69, 58, 0.8)', sidebarBg: 'rgba(20, 17, 15, 0.95)', textMain: '#faf7f2', glow: '#d4a373' },
+    sandstone: { primary: '#cca47c', secondary: '#84a98c', bgBase: '#121514', cardBg: 'rgba(26, 34, 30, 0.85)', cardBorder: 'rgba(62, 78, 70, 0.8)', sidebarBg: 'rgba(16, 21, 18, 0.95)', textMain: '#f4f6f4', glow: '#cca47c' },
+    candyCloud: { primary: '#f472b6', secondary: '#38bdf8', bgBase: '#130d1a', cardBg: 'rgba(30, 18, 42, 0.8)', cardBorder: 'rgba(80, 42, 110, 0.8)', sidebarBg: 'rgba(20, 12, 28, 0.9)', textMain: '#fdf8ff', glow: '#f472b6' },
+    lofiShores: { primary: '#38bdf8', secondary: '#fb923c', bgBase: '#0b1622', cardBg: 'rgba(12, 28, 48, 0.8)', cardBorder: 'rgba(28, 64, 100, 0.8)', sidebarBg: 'rgba(8, 18, 32, 0.9)', textMain: '#f0f9ff', glow: '#38bdf8' }
+  };
+
+  const FONT_PRESETS = {
+    default: { body: "'Plus Jakarta Sans', sans-serif", timer: "'Bebas Neue', sans-serif" },
+    japandi: { body: "'Outfit', sans-serif", timer: "'Space Grotesk', sans-serif" },
+    editorial: { body: "'Inter', sans-serif", timer: "'DM Serif Display', serif" },
+    modern: { body: "'Lexend', sans-serif", timer: "'JetBrains Mono', monospace" }
+  };
+
+  const state = {
+    activeTab: 'timer',
+    mode: 'IDLE', // IDLE, FLOWING, PAUSED_FLOW, BREAK, PAUSED_BREAK
+    workStartTime: null,
+    accumulatedWorkMs: 0,
+    lastWorkStartTimestamp: null,
+    breakTotalSec: 0,
+    breakRemainingSec: 0,
+    breakEndTimestamp: null,
+    pauseCount: 0,
+    divisor: parseInt(localStorage.getItem('flowmo_ratio') || '5'),
+    currentWeekOffset: 0,
+    timerInterval: null,
+    sessions: JSON.parse(localStorage.getItem('flowmo_sessions_log') || '[]'),
+    tasks: JSON.parse(localStorage.getItem('flowmo_tasks') || '[]'),
+    allocations: JSON.parse(localStorage.getItem('flowmo_allocations') || '[]'),
+    activeTaskId: localStorage.getItem('flowmo_active_task_id') || '',
+    currentTheme: JSON.parse(localStorage.getItem('flowmo_theme') || JSON.stringify(PRESET_THEMES.emerald)),
+    currentFont: JSON.parse(localStorage.getItem('flowmo_font') || JSON.stringify(FONT_PRESETS.default)),
+    themeHistory: [],
+    historyIndex: -1,
+    isNavigatingHistory: false
+  };
+
+  function hexToRgb(hex) {
+    if (!hex) return '34, 197, 94';
+    let c = hex.replace('#', '');
+    if (c.length === 3) c = c.split('').map(x => x + x).join('');
+    const num = parseInt(c, 16);
+    return `${(num >> 16) & 255}, ${(num >> 8) & 255}, ${num & 255}`;
+  }
+
+  function applyFontToDOM(font) {
+    const root = document.documentElement;
+    root.style.setProperty('--font-body', font.body);
+    root.style.setProperty('--font-timer', font.timer);
+  }
+
+  function applyThemeToDOM(theme) {
+    const root = document.documentElement;
+    root.style.setProperty('--theme-primary', theme.primary);
+    root.style.setProperty('--theme-primary-rgb', hexToRgb(theme.primary));
+    root.style.setProperty('--theme-secondary', theme.secondary);
+    root.style.setProperty('--theme-secondary-rgb', hexToRgb(theme.secondary));
+    root.style.setProperty('--theme-bg-base', theme.bgBase);
+    root.style.setProperty('--theme-card-bg', theme.cardBg || 'rgba(2, 6, 23, 0.7)');
+    root.style.setProperty('--theme-card-border', theme.cardBorder || 'rgba(30, 41, 59, 0.8)');
+    root.style.setProperty('--theme-sidebar-bg', theme.sidebarBg || 'rgba(2, 6, 23, 0.85)');
+    root.style.setProperty('--theme-text-main', theme.textMain || '#f8fafc');
+    root.style.setProperty('--theme-glow', `${theme.glow}48`);
+  }
+
+  /* TASK MANAGEMENT ENGINE */
+  function toggleTaskDrawer() {
+    const drawer = document.getElementById('taskDrawer');
+    drawer.classList.toggle('-translate-x-full');
+  }
+
+  function openAddTaskModal() {
+    document.getElementById('addTaskModal').classList.remove('hidden');
+    // Set default due date to tomorrow same time
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    document.getElementById('taskDueDate').value = tomorrow.toISOString().slice(0, 16);
+  }
+
+  function closeAddTaskModal() {
+    document.getElementById('addTaskModal').classList.add('hidden');
+  }
+
+  function handleSaveTask(e) {
+    e.preventDefault();
+    const title = document.getElementById('taskTitle').value;
+    const category = document.getElementById('taskCategory').value || 'GENERAL';
+    let estUnits = parseInt(document.getElementById('taskEstUnits').value) || 3;
+    const dueDate = document.getElementById('taskDueDate').value;
+    const applyBuffer = document.getElementById('taskApplyBuffer').checked;
+
+    if (applyBuffer) {
+      estUnits = Math.ceil(estUnits * 1.25); // Behavioral 25% buffer
+    }
+
+    const newTask = {
+      id: 'task_' + Date.now(),
+      title,
+      category,
+      estUnits,
+      completedUnits: 0,
+      dueDate,
+      createdAt: new Date().toISOString()
+    };
+
+    state.tasks.push(newTask);
+    saveTasks();
+    closeAddTaskModal();
+    renderTasks();
+    populateTaskDropdowns();
+  }
+
+  function saveTasks() {
+    localStorage.setItem('flowmo_tasks', JSON.stringify(state.tasks));
+  }
+
+  function deleteTask(taskId, e) {
+    if (e) e.stopPropagation();
+    state.tasks = state.tasks.filter(t => t.id !== taskId);
+    state.allocations = state.allocations.filter(a => a.taskId !== taskId);
+    if (state.activeTaskId === taskId) {
+      state.activeTaskId = '';
+      localStorage.removeItem('flowmo_active_task_id');
+    }
+    saveTasks();
+    localStorage.setItem('flowmo_allocations', JSON.stringify(state.allocations));
+    renderTasks();
+    populateTaskDropdowns();
+    updateWeekCalendar();
+  }
+
+  function calculateUrgency(task) {
+    const dueMs = new Date(task.dueDate).getTime();
+    const nowMs = Date.now();
+    const hoursLeft = Math.max(0.1, (dueMs - nowMs) / (1000 * 3600));
+    const hoursNeeded = Math.max(0.5, (task.estUnits - task.completedUnits) * 0.5);
+    const urgencyRatio = hoursNeeded / hoursLeft;
+
+    if (urgencyRatio > 0.8) return { label: 'CRITICAL URGENCY', color: 'bg-rose-500/20 text-rose-400 border-rose-500/40' };
+    if (urgencyRatio > 0.4) return { label: 'HIGH PRIORITY', color: 'bg-amber-500/20 text-amber-400 border-amber-500/40' };
+    return { label: 'ON TRACK', color: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40' };
+  }
+
+  function renderTasks() {
+    const container = document.getElementById('taskListContainer');
+    if (!container) return;
+
+    if (state.tasks.length === 0) {
+      container.innerHTML = `
+        <div class="text-center py-12 px-4 text-slate-500">
+          <i class="fa-solid fa-list-check text-3xl mb-3 opacity-40"></i>
+          <p class="text-xs font-semibold">Your backlog is empty.</p>
+          <p class="text-[10px] opacity-75 mt-1">Add tasks to break long-term goals into focused Flowmodoro units.</p>
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = state.tasks.map(t => {
+      const urgency = calculateUrgency(t);
+      const isSelected = state.activeTaskId === t.id;
+      const progressPct = Math.min(100, Math.round((t.completedUnits / t.estUnits) * 100));
+
+      return `
+        <div onclick="selectTaskForTimer('${t.id}')" class="p-4 rounded-2xl border transition cursor-pointer ${isSelected ? 'bg-emerald-950/40 border-emerald-500/60 shadow-lg' : 'bg-slate-900/60 border-slate-800 hover:border-slate-700'} relative group">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-[10px] font-mono px-2 py-0.5 rounded-md bg-slate-950 border border-slate-800 text-slate-300 font-bold">${t.category}</span>
+            <span class="text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full border ${urgency.color}">${urgency.label}</span>
+          </div>
+
+          <h4 class="font-extrabold text-xs text-white leading-snug mb-1">${t.title}</h4>
+          
+          <div class="text-[10px] font-mono text-slate-400 flex items-center justify-between my-2">
+            <span>Due: ${new Date(t.dueDate).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+            <span class="theme-primary-text font-bold">${t.completedUnits} / ${t.estUnits} Flow units</span>
+          </div>
+
+          <div class="w-full h-1.5 bg-slate-950 rounded-full overflow-hidden border border-slate-800/80 mb-2">
+            <div class="h-full theme-primary-bg" style="width: ${progressPct}%"></div>
+          </div>
+
+          <div class="flex items-center justify-between pt-1 text-[10px]">
+            <span class="text-slate-500 font-medium">${isSelected ? '✓ Currently Selected' : 'Click to bind timer'}</span>
+            <button onclick="deleteTask('${t.id}', event)" class="text-slate-500 hover:text-rose-400 p-1"><i class="fa-solid fa-trash"></i></button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function populateTaskDropdowns() {
+    const activeSelect = document.getElementById('activeTaskSelect');
+    const allocSelect = document.getElementById('allocTaskId');
+
+    if (activeSelect) {
+      activeSelect.innerHTML = '<option value="">-- Working on Unassigned Task --</option>' +
+        state.tasks.map(t => `<option value="${t.id}" ${state.activeTaskId === t.id ? 'selected' : ''}>[${t.category}] ${t.title}</option>`).join('');
+    }
+
+    if (allocSelect) {
+      allocSelect.innerHTML = state.tasks.length === 0 ? '<option value="">No Tasks Available</option>' :
+        state.tasks.map(t => `<option value="${t.id}">[${t.category}] ${t.title}</option>`).join('');
+    }
+
+    updateActiveTaskProgressBar();
+  }
+
+  function selectTaskForTimer(taskId) {
+    state.activeTaskId = taskId;
+    localStorage.setItem('flowmo_active_task_id', taskId);
+    renderTasks();
+    populateTaskDropdowns();
+  }
+
+  function onSelectedTaskChange() {
+    const val = document.getElementById('activeTaskSelect').value;
+    selectTaskForTimer(val);
+  }
+
+  function updateActiveTaskProgressBar() {
+    const container = document.getElementById('activeTaskProgressContainer');
+    const label = document.getElementById('activeTaskTitleLabel');
+    const units = document.getElementById('activeTaskUnitsLabel');
+    const bar = document.getElementById('activeTaskProgressBar');
+
+    const activeTask = state.tasks.find(t => t.id === state.activeTaskId);
+
+    if (!activeTask || !container) {
+      if (container) container.classList.add('hidden');
+      return;
+    }
+
+    container.classList.remove('hidden');
+    label.textContent = `[${activeTask.category}] ${activeTask.title}`;
+    units.textContent = `${activeTask.completedUnits} / ${activeTask.estUnits} Flow units`;
+    const pct = Math.min(100, Math.round((activeTask.completedUnits / activeTask.estUnits) * 100));
+    bar.style.width = `${pct}%`;
+  }
+
+  /* CALENDAR ALLOCATION & G-CAL WORKAROUND ENGINE */
+  function onCalendarCellClick(dayIdx, e) {
+    if (e.target.closest('.allocated-block') || e.target.closest('.focus-block')) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const clickY = e.clientY - rect.top;
+    const hour = Math.floor(clickY / 48);
+
+    openAllocateModal(dayIdx, hour);
+  }
+
+  function openAllocateModal(dayIdx, hour) {
+    if (state.tasks.length === 0) {
+      alert("Please add a task to your Smart Task Drawer first before scheduling a focus window!");
+      toggleTaskDrawer();
+      return;
+    }
+
+    const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    const timeLabel = `${dayNames[dayIdx]} @ ${String(hour).padStart(2, '0')}:00`;
+
+    document.getElementById('allocDayIdx').value = dayIdx;
+    document.getElementById('allocHour').value = hour;
+    document.getElementById('allocTimeSlotLabel').textContent = timeLabel;
+    
+    populateTaskDropdowns();
+    document.getElementById('allocateModal').classList.remove('hidden');
+  }
+
+  function closeAllocateModal() {
+    document.getElementById('allocateModal').classList.add('hidden');
+  }
+
+  function handleSaveAllocation(e) {
+    e.preventDefault();
+    const dayIdx = parseInt(document.getElementById('allocDayIdx').value);
+    const hour = parseInt(document.getElementById('allocHour').value);
+    const taskId = document.getElementById('allocTaskId').value;
+    const durationMins = parseInt(document.getElementById('allocDurationMins').value);
+
+    const newAlloc = {
+      id: 'alloc_' + Date.now(),
+      taskId,
+      weekOffset: state.currentWeekOffset,
+      dayIdx,
+      hour,
+      durationMins
+    };
+
+    state.allocations.push(newAlloc);
+    localStorage.setItem('flowmo_allocations', JSON.stringify(state.allocations));
+    closeAllocateModal();
+    updateWeekCalendar();
+  }
+
+  function deleteAllocation(allocId, e) {
+    if (e) e.stopPropagation();
+    state.allocations = state.allocations.filter(a => a.id !== allocId);
+    localStorage.setItem('flowmo_allocations', JSON.stringify(state.allocations));
+    updateWeekCalendar();
+  }
+
+  function generateGCalDeepLink(task, dayDate, hour, durationMins) {
+    const start = new Date(dayDate);
+    start.setHours(hour, 0, 0, 0);
+    const end = new Date(start.getTime() + durationMins * 60000);
+
+    const formatGCalDate = (d) => d.toISOString().replace(/-|:|\.\d\d\d/g, '');
+    
+    const title = encodeURIComponent(`[Flowmodoro] ${task ? task.title : 'Focus Session'}`);
+    const details = encodeURIComponent(`Dedicated focus window created in Flowmodoro App.\nImplementation Intention: Execute focused study session without distraction.`);
+    const dates = `${formatGCalDate(start)}/${formatGCalDate(end)}`;
+
+    return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${dates}&details=${details}`;
+  }
+
+  /* TIMER LOGIC & SESSION EXECUTION */
+  function tickTimer() {
+    const now = Date.now();
+
+    if (state.mode === 'FLOWING') {
+      const elapsedMs = state.accumulatedWorkMs + (now - state.lastWorkStartTimestamp);
+      const elapsedSec = Math.floor(elapsedMs / 1000);
+      document.getElementById('mainTimerDisplay').textContent = formatTime(elapsedSec);
+
+      const breakSec = Math.floor(elapsedSec / state.divisor);
+      document.getElementById('calculatedBreakTime').textContent = formatTime(breakSec);
+    } else if (state.mode === 'BREAK') {
+      const remainingMs = Math.max(0, state.breakEndTimestamp - now);
+      const remainingSec = Math.ceil(remainingMs / 1000);
+      document.getElementById('mainTimerDisplay').textContent = formatTime(remainingSec);
+
+      if (remainingSec <= 0) {
+        skipBreakAndReset();
+      }
+    }
+  }
+
+  function startWorkTimer() {
+    if (state.mode === 'IDLE') {
+      state.mode = 'FLOWING';
+      state.workStartTime = new Date();
+      state.accumulatedWorkMs = 0;
+      state.lastWorkStartTimestamp = Date.now();
+      state.pauseCount = 0;
+
+      document.getElementById('sessionStartTimeDisplay').textContent = state.workStartTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      document.getElementById('sessionPauseCount').textContent = '0 breaks';
+    } else if (state.mode === 'PAUSED_FLOW') {
+      state.mode = 'FLOWING';
+      state.lastWorkStartTimestamp = Date.now();
+    }
+
+    document.getElementById('btnStartWork').disabled = true;
+    document.getElementById('btnPauseWork').disabled = false;
+    document.getElementById('btnStopAndBreak').disabled = false;
+    document.getElementById('pausedNotice').classList.add('opacity-0');
+
+    if (state.timerInterval) clearInterval(state.timerInterval);
+    state.timerInterval = setInterval(tickTimer, 200);
+    tickTimer();
+  }
+
+  function pauseWorkTimer() {
+    if (state.mode === 'FLOWING') {
+      state.mode = 'PAUSED_FLOW';
+      state.accumulatedWorkMs += (Date.now() - state.lastWorkStartTimestamp);
+      state.pauseCount++;
+
+      document.getElementById('sessionPauseCount').textContent = `${state.pauseCount} pause${state.pauseCount > 1 ? 's' : ''}`;
+      document.getElementById('btnStartWork').disabled = false;
+      document.getElementById('btnPauseWork').disabled = true;
+      document.getElementById('pausedNotice').classList.remove('opacity-0');
+    }
+  }
+
+  function triggerBreakMode() {
+    let totalWorkMs = state.accumulatedWorkMs;
+    if (state.mode === 'FLOWING') {
+      totalWorkMs += (Date.now() - state.lastWorkStartTimestamp);
+    }
+
+    if (totalWorkMs < 5000) return; // Ignore very short clicks (<5s)
+
+    const newSession = {
+      id: 'sess_' + Date.now(),
+      taskId: state.activeTaskId || null,
+      startTime: state.workStartTime.toISOString(),
+      endTime: new Date().toISOString(),
+      durationMs: totalWorkMs,
+      pauseCount: state.pauseCount
+    };
+
+    state.sessions.push(newSession);
+    localStorage.setItem('flowmo_sessions_log', JSON.stringify(state.sessions));
+
+    // Increment active task completed units if attached
+    if (state.activeTaskId) {
+      const task = state.tasks.find(t => t.id === state.activeTaskId);
+      if (task) {
+        task.completedUnits += 1; // 1 logged session unit
+        saveTasks();
+        renderTasks();
+        updateActiveTaskProgressBar();
+      }
+    }
+
+    updateStatsHeader();
+    updateWeekCalendar();
+
+    const breakSec = Math.floor((totalWorkMs / 1000) / state.divisor);
+    state.mode = 'BREAK';
+    state.breakTotalSec = breakSec;
+    state.breakRemainingSec = breakSec;
+    state.breakEndTimestamp = Date.now() + (breakSec * 1000);
+
+    document.getElementById('workControls').classList.add('hidden');
+    document.getElementById('workControls').classList.remove('grid');
+    document.getElementById('breakControls').classList.remove('hidden');
+    document.getElementById('breakControls').classList.add('grid');
+    document.getElementById('timerSubtitle').textContent = 'Rest Remaining';
+    document.getElementById('timerStatusBadge').innerHTML = '<span class="h-2 w-2 rounded-full bg-indigo-400 animate-ping"></span> Rest Phase';
+
+    if (state.timerInterval) clearInterval(state.timerInterval);
+    state.timerInterval = setInterval(tickTimer, 200);
+    tickTimer();
+  }
+
+  function pauseBreakTimer() {
+    if (state.mode === 'BREAK') {
+      state.mode = 'PAUSED_BREAK';
+      state.breakRemainingSec = Math.max(0, Math.ceil((state.breakEndTimestamp - Date.now()) / 1000));
+      clearInterval(state.timerInterval);
+      document.getElementById('pauseBreakBtnLabel').textContent = 'Resume Rest';
+      document.getElementById('pausedNotice').classList.remove('opacity-0');
+    } else if (state.mode === 'PAUSED_BREAK') {
+      state.mode = 'BREAK';
+      state.breakEndTimestamp = Date.now() + (state.breakRemainingSec * 1000);
+      document.getElementById('pauseBreakBtnLabel').textContent = 'Pause Break';
+      document.getElementById('pausedNotice').classList.add('opacity-0');
+      state.timerInterval = setInterval(tickTimer, 200);
+      tickTimer();
+    }
+  }
+
+  function skipBreakAndReset() {
+    if (state.timerInterval) clearInterval(state.timerInterval);
+    state.mode = 'IDLE';
+    state.accumulatedWorkMs = 0;
+    
+    document.getElementById('mainTimerDisplay').textContent = '00:00:00';
+    document.getElementById('calculatedBreakTime').textContent = '00:00';
+    document.getElementById('timerSubtitle').textContent = 'Focus Elapsed';
+    document.getElementById('timerStatusBadge').innerHTML = '<span class="h-2 w-2 rounded-full theme-primary-bg animate-ping"></span> Focus Flow';
+    
+    document.getElementById('workControls').classList.remove('hidden');
+    document.getElementById('workControls').classList.add('grid');
+    document.getElementById('breakControls').classList.add('hidden');
+    document.getElementById('breakControls').classList.remove('grid');
+    
+    document.getElementById('btnStartWork').disabled = false;
+    document.getElementById('btnPauseWork').disabled = true;
+    document.getElementById('btnStopAndBreak').disabled = true;
+    document.getElementById('pausedNotice').classList.add('opacity-0');
+  }
+
+  /* CALENDAR & UTILS */
+  function getStartOfWeek(d) {
+    const date = new Date(d);
+    const day = date.getDay();
+    const diff = date.getDate() - day + (day === 0 ? -6 : 1); // Adjust for Monday start
+    date.setDate(diff);
+    date.setHours(0, 0, 0, 0);
+    return date;
+  }
+
+  function formatTime(totalSeconds) {
+    const hrs = Math.floor(totalSeconds / 3600);
+    const mins = Math.floor((totalSeconds % 3600) / 60);
+    const secs = totalSeconds % 60;
+    const pM = String(mins).padStart(2, '0');
+    const pS = String(secs).padStart(2, '0');
+    if (hrs > 0) return `${String(hrs).padStart(2, '0')}:${pM}:${pS}`;
+    return `${pM}:${pS}`;
+  }
+
+  function formatHM(totalMs) {
+    const totalSec = Math.floor(totalMs / 1000);
+    const hrs = Math.floor(totalSec / 3600);
+    const mins = Math.floor((totalSec % 3600) / 60);
+    return `${hrs}h ${mins}m`;
+  }
+
+  function updateRatioBadge() {
+    const badge = document.getElementById('currentRatioBadge');
+    if (badge) {
+      const pct = Math.round((1 / state.divisor) * 100);
+      badge.textContent = `1 : ${state.divisor} (${pct}%)`;
+    }
+  }
+
+  function updateStatsHeader() {
+    const todayStr = new Date().toDateString();
+    let todayMs = 0;
+    let weekMs = 0;
+
+    const currentMonday = getStartOfWeek(new Date());
+    const currentSunday = new Date(currentMonday);
+    currentSunday.setDate(currentSunday.getDate() + 6);
+    currentSunday.setHours(23, 59, 59, 999);
+
+    state.sessions.forEach(s => {
+      const sDate = new Date(s.startTime);
+      if (sDate.toDateString() === todayStr) todayMs += s.durationMs;
+      if (sDate >= currentMonday && sDate <= currentSunday) weekMs += s.durationMs;
+    });
+
+    const elToday = document.getElementById('sidebarTodayFocus');
+    const elWeek = document.getElementById('sidebarWeekFocus');
+    if (elToday) elToday.textContent = formatHM(todayMs);
+    if (elWeek) elWeek.textContent = formatHM(weekMs);
+  }
+
+  function renderTimeGrid() {
+    const gridRows = document.getElementById('timeGridRows');
+    if (!gridRows) return;
+    gridRows.innerHTML = '';
+
+    for (let h = 0; h < 24; h++) {
+      const timeStr = String(h).padStart(2, '0') + ':00';
+      const row = document.createElement('div');
+      row.className = 'h-12 border-b border-slate-800/40 grid grid-cols-8 text-[10px] text-slate-500 font-mono items-start pointer-events-none';
+      row.innerHTML = `<div class="pr-2 pt-1 text-right border-r border-slate-800/40">${timeStr}</div><div class="col-span-7"></div>`;
+      gridRows.appendChild(row);
+    }
+  }
+
+  function updateWeekCalendar() {
+    const now = new Date();
+    const targetMonday = getStartOfWeek(now);
+    targetMonday.setDate(targetMonday.getDate() + (state.currentWeekOffset * 7));
+
+    const weekDays = [];
+    for (let i = 0; i < 7; i++) {
+      const day = new Date(targetMonday);
+      day.setDate(day.getDate() + i);
+      weekDays.push(day);
+    }
+
+    const startStr = weekDays[0].toLocaleDateString([], { month: 'short', day: 'numeric' });
+    const endStr = weekDays[6].toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+    document.getElementById('weekRangeLabel').textContent = `${startStr} - ${endStr}`;
+
+    for (let i = 0; i < 7; i++) {
+      const colHead = document.getElementById(`dayCol-${i}`);
+      const dayNum = colHead.querySelector('.date-num');
+      dayNum.textContent = weekDays[i].getDate();
+
+      if (weekDays[i].toDateString() === now.toDateString()) {
+        colHead.className = 'flex flex-col items-center theme-primary-text font-bold';
+      } else {
+        colHead.className = 'flex flex-col items-center text-slate-400';
+      }
+
+      const eventCol = document.getElementById(`eventCol-${i}`);
+      if (eventCol) eventCol.innerHTML = '';
+    }
+
+    // 1. Render Unfulfilled Allocated Focus Blocks ("Ghost Blocks")
+    state.allocations.filter(a => a.weekOffset === state.currentWeekOffset).forEach(alloc => {
+      const task = state.tasks.find(t => t.id === alloc.taskId);
+      const topPx = alloc.hour * 48;
+      const heightPx = (alloc.durationMins / 60) * 48;
+      const dayDate = weekDays[alloc.dayIdx];
+
+      const block = document.createElement('div');
+      block.className = 'allocated-block absolute inset-x-1 rounded-xl p-2 text-xs font-medium border-2 border-dashed border-emerald-500/50 bg-emerald-500/10 text-emerald-200 overflow-hidden shadow-sm hover:bg-emerald-500/20 transition z-10';
+      block.style.top = `${topPx}px`;
+      block.style.height = `${Math.max(28, heightPx)}px`;
+
+      const gcalUrl = generateGCalDeepLink(task, dayDate, alloc.hour, alloc.durationMins);
+
+      block.innerHTML = `
+        <div class="font-extrabold text-[11px] leading-tight flex items-center justify-between">
+          <span class="truncate">${task ? task.title : 'Focus Target'}</span>
+          <div class="flex items-center gap-1">
+            <a href="${gcalUrl}" target="_blank" rel="noopener" class="hover:text-white text-[10px]" title="Export to GCal (Bypasses Admin Block)"><i class="fa-brands fa-google"></i></a>
+            <button onclick="deleteAllocation('${alloc.id}', event)" class="hover:text-rose-400 text-[10px]"><i class="fa-solid fa-xmark"></i></button>
+          </div>
+        </div>
+        <div class="text-[10px] opacity-80 font-mono flex justify-between items-center mt-0.5">
+          <span>Allocated ${alloc.durationMins}m</span>
+          <button onclick="startAllocatedFlow('${alloc.taskId}')" class="underline text-emerald-400 font-bold hover:text-emerald-200">Start Flow</button>
+        </div>
+      `;
+
+      const eventCol = document.getElementById(`eventCol-${alloc.dayIdx}`);
+      if (eventCol) eventCol.appendChild(block);
+    });
+
+    // 2. Render Logged Focus Sessions
+    state.sessions.forEach(sess => {
+      const sStart = new Date(sess.startTime);
+      const task = state.tasks.find(t => t.id === sess.taskId);
+
+      weekDays.forEach((day, dayIdx) => {
+        if (sStart.toDateString() === day.toDateString()) {
+          const startMinutes = sStart.getHours() * 60 + sStart.getMinutes();
+          const durationMinutes = Math.max(15, (sess.durationMs / 1000) / 60);
+
+          const topPx = (startMinutes / 60) * 48;
+          const heightPx = (durationMinutes / 60) * 48;
+
+          const block = document.createElement('div');
+          block.className = 'focus-block absolute inset-x-1 rounded-xl p-2 text-xs font-semibold theme-primary-bg text-slate-950 shadow-md border border-white/20 overflow-hidden hover:scale-[1.02] transition z-20';
+          block.style.top = `${topPx}px`;
+          block.style.height = `${Math.max(24, heightPx)}px`;
+          
+          const timeText = `${sStart.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+          block.innerHTML = `
+            <div class="font-extrabold text-[11px] leading-tight flex items-center justify-between">
+              <span class="truncate">${task ? task.title : 'Completed Session'}</span>
+              <button onclick="deleteSession('${sess.id}', event)" class="hover:text-rose-950 text-[10px] ml-1"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="text-[10px] opacity-90 font-mono">${timeText} (${formatHM(sess.durationMs)})</div>
+          `;
+
+          const eventCol = document.getElementById(`eventCol-${dayIdx}`);
+          if (eventCol) eventCol.appendChild(block);
+        }
+      });
+    });
+  }
+
+  function startAllocatedFlow(taskId) {
+    if (taskId) {
+      selectTaskForTimer(taskId);
+    }
+    switchTab('timer');
+  }
+
+  function changeWeek(delta) {
+    state.currentWeekOffset += delta;
+    updateWeekCalendar();
+  }
+
+  function resetToCurrentWeek() {
+    state.currentWeekOffset = 0;
+    updateWeekCalendar();
+  }
+
+  function deleteSession(id, e) {
+    if (e) e.stopPropagation();
+    state.sessions = state.sessions.filter(s => s.id !== id);
+    localStorage.setItem('flowmo_sessions_log', JSON.stringify(state.sessions));
+    updateStatsHeader();
+    updateWeekCalendar();
+  }
+
+  function clearWeekDataModal() {
+    if (confirm('Clear all recorded focus session logs and calendar allocations?')) {
+      state.sessions = [];
+      state.allocations = [];
+      localStorage.removeItem('flowmo_sessions_log');
+      localStorage.removeItem('flowmo_allocations');
+      updateStatsHeader();
+      updateWeekCalendar();
+    }
+  }
+
+  function switchTab(tab) {
+    state.activeTab = tab;
+    const btnTimer = document.getElementById('navTabTimer');
+    const btnCal = document.getElementById('navTabCalendar');
+    const tabTimer = document.getElementById('tabContentTimer');
+    const tabCal = document.getElementById('tabContentCalendar');
+
+    if (tab === 'timer') {
+      tabTimer.classList.remove('hidden');
+      tabCal.classList.add('hidden');
+      btnTimer.className = 'h-11 w-11 rounded-2xl flex items-center justify-center transition theme-primary-text bg-emerald-500/15 border border-emerald-500/30 shadow-lg group relative';
+      btnCal.className = 'h-11 w-11 rounded-2xl flex items-center justify-center transition text-slate-400 hover:text-slate-200 hover:bg-slate-900/80 border border-transparent group relative';
+    } else {
+      tabTimer.classList.add('hidden');
+      tabCal.classList.remove('hidden');
+      btnCal.className = 'h-11 w-11 rounded-2xl flex items-center justify-center transition theme-primary-text bg-emerald-500/15 border border-emerald-500/30 shadow-lg group relative';
+      btnTimer.className = 'h-11 w-11 rounded-2xl flex items-center justify-center transition text-slate-400 hover:text-slate-200 hover:bg-slate-900/80 border border-transparent group relative';
+      updateWeekCalendar();
+    }
+  }
+
+  function toggleRatioSettings() {
+    const modal = document.getElementById('settingsModal');
+    const select = document.getElementById('ratioSelect');
+    if (select) select.value = state.divisor;
+    modal.classList.toggle('hidden');
+  }
+
+  function saveSettingsAndTheme() {
+    const select = document.getElementById('ratioSelect');
+    if (select) {
+      state.divisor = parseInt(select.value);
+      localStorage.setItem('flowmo_ratio', state.divisor.toString());
+      updateRatioBadge();
+    }
+    localStorage.setItem('flowmo_theme', JSON.stringify(state.currentTheme));
+    toggleRatioSettings();
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    applyFontToDOM(state.currentFont);
+    applyThemeToDOM(state.currentTheme);
+    renderTimeGrid();
+    renderTasks();
+    populateTaskDropdowns();
+    updateWeekCalendar();
+    updateRatioBadge();
+    updateStatsHeader();
+
+    const scrollContainer = document.getElementById('calendarScrollContainer');
+    if (scrollContainer) scrollContainer.scrollTop = 8 * 48;
+
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) tickTimer(); });
+    window.addEventListener('focus', () => { tickTimer(); });
+  });
+</script>
+</body>
+</html>
