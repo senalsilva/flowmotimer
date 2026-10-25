@@ -135,7 +135,6 @@
 
       <!-- Bottom Section: Sync & Settings Icons -->
       <div class="flex flex-col items-center gap-3 w-full px-2">
-        <!-- Cloud Sync Button with Auto-Sync Status Indicator -->
         <button onclick="toggleSyncModal()" class="h-10 w-10 rounded-xl bg-slate-900/90 border border-slate-800 hover:bg-slate-800 transition flex items-center justify-center group relative" title="Auto Cloud Sync Settings">
           <i id="sidebarSyncIcon" class="fa-solid fa-cloud text-sm text-slate-400"></i>
           <span id="sidebarSyncDot" class="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-slate-600"></span>
@@ -363,17 +362,19 @@
 
   </div>
 
-<!-- ADD/EDIT TASK MODAL -->
+<!-- ADD / EDIT TASK MODAL -->
 <div id="addTaskModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
   <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4">
     <div class="flex justify-between items-center border-b border-slate-800 pb-3">
-      <h3 class="font-bold text-white text-base flex items-center gap-2">
+      <h3 id="taskModalTitle" class="font-bold text-white text-base flex items-center gap-2">
         <i class="fa-solid fa-list-check theme-primary-text"></i> Create Task / Assignment
       </h3>
       <button onclick="closeAddTaskModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
     </div>
 
     <form id="taskForm" onsubmit="handleSaveTask(event)" class="space-y-3 text-xs">
+      <input type="hidden" id="editingTaskId" value="">
+
       <div>
         <label class="block text-slate-400 mb-1 font-bold">Task / Assignment Name</label>
         <input type="text" id="taskTitle" required placeholder="e.g. Physics Ch. 4 Problem Set" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-slate-200 focus:border-emerald-500 focus:outline-none font-medium">
@@ -389,7 +390,7 @@
         <input type="datetime-local" id="taskDueDate" required class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-slate-200 focus:border-emerald-500 focus:outline-none font-mono">
       </div>
 
-      <button type="submit" class="w-full py-3 theme-primary-bg text-slate-950 font-bold rounded-xl text-xs transition hover:opacity-90 mt-2">
+      <button type="submit" id="taskModalSubmitBtn" class="w-full py-3 theme-primary-bg text-slate-950 font-bold rounded-xl text-xs transition hover:opacity-90 mt-2">
         Save Task to Backlog
       </button>
     </form>
@@ -408,14 +409,12 @@
     </div>
 
     <div class="space-y-3 text-xs">
-      <!-- ASSIGNMENT / TASK SELECTOR DROPDOWN -->
       <div class="bg-slate-950 p-3 rounded-2xl border border-slate-800/80 space-y-1.5">
         <label class="block text-slate-400 font-bold text-[11px] flex items-center justify-between">
           <span><i class="fa-solid fa-tag theme-primary-text mr-1"></i> Assigned Task / Assignment</span>
           <span class="text-[9px] text-slate-500 font-normal">Change anytime</span>
         </label>
         <select id="inspectTaskSelect" onchange="handleSessionTaskChange()" class="w-full bg-slate-900 border border-slate-800 text-slate-200 text-xs font-semibold rounded-xl p-2.5 focus:outline-none focus:border-emerald-500">
-          <!-- Populated dynamically -->
         </select>
       </div>
 
@@ -448,7 +447,6 @@
     </div>
 
     <div class="space-y-2 pt-2 border-t border-slate-800">
-      <!-- GOOGLE CALENDAR EXPORT BUTTON -->
       <a id="inspectGCalLink" target="_blank" rel="noopener noreferrer" class="w-full py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold rounded-xl text-xs transition flex items-center justify-center gap-2 shadow-lg">
         <i class="fa-brands fa-google text-sm"></i>
         <span>Export Session to Google Calendar</span>
@@ -477,7 +475,6 @@
       Once connected, <strong>Automatic Sync</strong> runs silently in the background. Every task added, session completed, or setting changed is saved automatically. Data is refreshed whenever you switch back to this tab.
     </p>
 
-    <!-- Quick instructions card -->
     <div class="bg-slate-950 p-3.5 rounded-2xl border border-slate-800/80 text-[11px] text-slate-300 space-y-1">
       <div class="font-bold text-emerald-400 flex items-center gap-1.5">
         <i class="fa-solid fa-bolt"></i> Automatic Sync Rules:
@@ -508,7 +505,6 @@
       </div>
     </form>
 
-    <!-- Sync Controls & Status -->
     <div id="syncActiveControls" class="pt-3 border-t border-slate-800 space-y-3">
       <div class="flex items-center justify-between text-xs bg-slate-950 p-3 rounded-2xl border border-slate-800/80">
         <div class="flex items-center gap-2">
@@ -542,7 +538,6 @@
       <button onclick="toggleRatioSettings()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
     </div>
 
-    <!-- SECTION 1: BREAK RATIO -->
     <div class="space-y-3 text-xs">
       <h4 class="font-extrabold text-slate-300 uppercase tracking-wider text-[11px] flex items-center gap-2">
         <i class="fa-solid fa-hourglass-half theme-primary-text"></i> Flowtime Break Ratio
@@ -559,7 +554,6 @@
 
     <div class="w-full h-[1px] bg-slate-800"></div>
 
-    <!-- SECTION 2: FONT PAIRINGS -->
     <div class="space-y-3 text-xs">
       <h4 class="font-extrabold text-slate-300 uppercase tracking-wider text-[11px] flex items-center gap-2">
         <i class="fa-solid fa-font theme-primary-text"></i> Typography & Font Style
@@ -586,7 +580,6 @@
 
     <div class="w-full h-[1px] bg-slate-800"></div>
 
-    <!-- SECTION 3: THEME SELECTION & EDITING -->
     <div class="space-y-4 text-xs">
       <div class="flex items-center justify-between">
         <h4 class="font-extrabold text-slate-300 uppercase tracking-wider text-[11px] flex items-center gap-2">
@@ -803,14 +796,13 @@
     }
   }
 
-  // Automatic debounced sync call triggered after any change
   function autoSyncTrigger() {
     if (!state.syncBinId || !state.syncApiKey) return;
 
     if (autoSyncTimer) clearTimeout(autoSyncTimer);
     autoSyncTimer = setTimeout(() => {
       syncToCloud(false);
-    }, 1000); // Debounce push by 1 second
+    }, 1000);
   }
 
   async function syncToCloud(showNotification = false) {
@@ -915,7 +907,6 @@
         lastPullTimestamp = Date.now();
         localStorage.setItem('flowmo_last_synced', state.lastSyncedAt);
 
-        // Refresh UI components
         renderTasks();
         populateTaskDropdowns();
         updateWeekCalendar();
@@ -954,42 +945,87 @@
     });
   }
 
-  /* TASK MANAGEMENT ENGINE */
+  /* TASK MANAGEMENT ENGINE (WITH EDIT SUPPORT) */
   function toggleTaskDrawer() {
     const drawer = document.getElementById('taskDrawer');
     drawer.classList.toggle('-translate-x-full');
   }
 
-  function openAddTaskModal() {
-    document.getElementById('addTaskModal').classList.remove('hidden');
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    document.getElementById('taskDueDate').value = tomorrow.toISOString().slice(0, 16);
+  function openAddTaskModal(taskId = null) {
+    const modal = document.getElementById('addTaskModal');
+    const titleEl = document.getElementById('taskModalTitle');
+    const submitBtn = document.getElementById('taskModalSubmitBtn');
+    const editingIdInput = document.getElementById('editingTaskId');
+    const titleInput = document.getElementById('taskTitle');
+    const categoryInput = document.getElementById('taskCategory');
+    const dueDateInput = document.getElementById('taskDueDate');
+
+    if (taskId) {
+      const task = state.tasks.find(t => t.id === taskId);
+      if (task) {
+        editingIdInput.value = task.id;
+        titleInput.value = task.title;
+        categoryInput.value = task.category || '';
+        dueDateInput.value = task.dueDate || '';
+        titleEl.innerHTML = '<i class="fa-solid fa-pen-to-square theme-primary-text"></i> Edit Task / Assignment';
+        submitBtn.textContent = 'Update Task Details';
+      }
+    } else {
+      editingIdInput.value = '';
+      titleInput.value = '';
+      categoryInput.value = '';
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      dueDateInput.value = tomorrow.toISOString().slice(0, 16);
+      titleEl.innerHTML = '<i class="fa-solid fa-list-check theme-primary-text"></i> Create Task / Assignment';
+      submitBtn.textContent = 'Save Task to Backlog';
+    }
+
+    modal.classList.remove('hidden');
   }
 
   function closeAddTaskModal() {
     document.getElementById('addTaskModal').classList.add('hidden');
+    document.getElementById('editingTaskId').value = '';
+  }
+
+  function editTask(taskId, e) {
+    if (e) e.stopPropagation();
+    openAddTaskModal(taskId);
   }
 
   function handleSaveTask(e) {
     e.preventDefault();
+    const editingId = document.getElementById('editingTaskId').value;
     const title = document.getElementById('taskTitle').value;
     const category = document.getElementById('taskCategory').value || 'GENERAL';
     const dueDate = document.getElementById('taskDueDate').value;
 
-    const newTask = {
-      id: 'task_' + Date.now(),
-      title,
-      category,
-      dueDate,
-      createdAt: new Date().toISOString()
-    };
+    if (editingId) {
+      const taskIndex = state.tasks.findIndex(t => t.id === editingId);
+      if (taskIndex !== -1) {
+        state.tasks[taskIndex].title = title;
+        state.tasks[taskIndex].category = category;
+        state.tasks[taskIndex].dueDate = dueDate;
+        showToast('Task Updated', 'Due date & details updated successfully.', 'fa-pen-to-square');
+      }
+    } else {
+      const newTask = {
+        id: 'task_' + Date.now(),
+        title,
+        category,
+        dueDate,
+        createdAt: new Date().toISOString()
+      };
+      state.tasks.push(newTask);
+      showToast('Task Created', 'New task added to backlog.', 'fa-plus');
+    }
 
-    state.tasks.push(newTask);
     saveTasks();
     closeAddTaskModal();
     renderTasks();
     populateTaskDropdowns();
+    updateWeekCalendar();
     autoSyncTrigger();
   }
 
@@ -1065,7 +1101,14 @@
 
           <div class="flex items-center justify-between pt-1 text-[10px]">
             <span class="text-slate-500 font-medium">${isSelected ? '✓ Currently Selected' : 'Click to bind timer'}</span>
-            <button onclick="deleteTask('${t.id}', event)" class="text-slate-500 hover:text-rose-400 p-1"><i class="fa-solid fa-trash"></i></button>
+            <div class="flex items-center gap-2">
+              <button onclick="editTask('${t.id}', event)" class="text-slate-400 hover:text-emerald-400 p-1 transition" title="Edit Task & Due Date">
+                <i class="fa-solid fa-pen-to-square"></i>
+              </button>
+              <button onclick="deleteTask('${t.id}', event)" class="text-slate-400 hover:text-rose-400 p-1 transition" title="Delete Task">
+                <i class="fa-solid fa-trash"></i>
+              </button>
+            </div>
           </div>
         </div>
       `;
@@ -1573,7 +1616,6 @@
 
     tickTimer();
 
-    // Auto-pull from cloud on returning to the tab if at least 15s have passed since last pull
     const now = Date.now();
     if (state.syncBinId && state.syncApiKey && (now - lastPullTimestamp > 15000)) {
       syncFromCloud(false);
@@ -1591,7 +1633,6 @@
     updateStatsHeader();
     updateSyncStatusUI();
 
-    // Initial background pull on load
     if (state.syncBinId && state.syncApiKey) {
       syncFromCloud(false);
     }
@@ -1599,11 +1640,9 @@
     const scrollContainer = document.getElementById('calendarScrollContainer');
     if (scrollContainer) scrollContainer.scrollTop = 8 * 48;
 
-    // Listeners for page re-entry / tab switching
     document.addEventListener('visibilitychange', handleVisibilityOrFocusChange);
     window.addEventListener('focus', handleVisibilityOrFocusChange);
 
-    // Periodic gentle background poll every 60 seconds (only when not actively timing a flow session)
     setInterval(() => {
       if (!document.hidden && state.syncBinId && state.syncApiKey && state.mode !== 'FLOWING') {
         syncFromCloud(false);
