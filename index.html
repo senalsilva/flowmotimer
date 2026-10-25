@@ -135,12 +135,12 @@
 
       <!-- Bottom Section: Sync & Settings Icons -->
       <div class="flex flex-col items-center gap-3 w-full px-2">
-        <!-- Cloud Sync Button with Status Indicator -->
-        <button onclick="toggleSyncModal()" class="h-10 w-10 rounded-xl bg-slate-900/90 border border-slate-800 hover:bg-slate-800 transition flex items-center justify-center group relative" title="Cross-Device Cloud Sync">
+        <!-- Cloud Sync Button with Auto-Sync Status Indicator -->
+        <button onclick="toggleSyncModal()" class="h-10 w-10 rounded-xl bg-slate-900/90 border border-slate-800 hover:bg-slate-800 transition flex items-center justify-center group relative" title="Auto Cloud Sync Settings">
           <i id="sidebarSyncIcon" class="fa-solid fa-cloud text-sm text-slate-400"></i>
           <span id="sidebarSyncDot" class="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-slate-600"></span>
           <span class="absolute left-14 bg-slate-900 border border-slate-800 text-slate-200 text-xs font-semibold px-2.5 py-1 rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none transition whitespace-nowrap shadow-xl z-50">
-            Cloud Sync (JSONbin)
+            Auto Cloud Sync
           </span>
         </button>
 
@@ -462,31 +462,31 @@
   </div>
 </div>
 
-<!-- CROSS-DEVICE CLOUD SYNC MODAL (OPTION B: JSONBIN.IO) -->
+<!-- CROSS-DEVICE CLOUD SYNC MODAL -->
 <div id="syncModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
   <div class="bg-slate-900 border border-slate-800 rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-5">
     <div class="flex justify-between items-center border-b border-slate-800 pb-3">
       <div class="flex items-center gap-2">
         <i class="fa-solid fa-cloud theme-primary-text text-lg"></i>
-        <h3 class="font-bold text-white text-base">Cross-Device Cloud Sync</h3>
+        <h3 class="font-bold text-white text-base">Automatic Cross-Device Sync</h3>
       </div>
       <button onclick="toggleSyncModal()" class="text-slate-400 hover:text-white p-1"><i class="fa-solid fa-xmark text-lg"></i></button>
     </div>
 
     <p class="text-xs text-slate-400 leading-relaxed">
-      Sync your tasks, focus logs, and settings seamlessly across your laptop and mobile device using <strong>JSONbin.io</strong>.
+      Once connected, <strong>Automatic Sync</strong> runs silently in the background. Every task added, session completed, or setting changed is saved automatically. Data is refreshed whenever you switch back to this tab.
     </p>
 
     <!-- Quick instructions card -->
     <div class="bg-slate-950 p-3.5 rounded-2xl border border-slate-800/80 text-[11px] text-slate-300 space-y-1">
       <div class="font-bold text-emerald-400 flex items-center gap-1.5">
-        <i class="fa-solid fa-circle-info"></i> How to setup (takes 1 minute):
+        <i class="fa-solid fa-bolt"></i> Automatic Sync Rules:
       </div>
-      <ol class="list-decimal list-inside text-slate-400 space-y-0.5 ml-1">
-        <li>Create a free bin on <a href="https://jsonbin.io" target="_blank" class="underline text-emerald-400 hover:text-emerald-300">jsonbin.io</a> with any JSON (e.g. <code class="bg-slate-900 px-1 py-0.5 rounded text-slate-200">{}</code>).</li>
-        <li>Copy your <strong>Bin ID</strong> and your <strong>Master Key / API Key</strong>.</li>
-        <li>Paste both below and click <strong>Save & Connect</strong>.</li>
-      </ol>
+      <ul class="list-disc list-inside text-slate-400 space-y-1 ml-1 text-[11px]">
+        <li><strong>Auto-Push:</strong> Pushes changes to cloud 1s after any action.</li>
+        <li><strong>Auto-Pull:</strong> Fetches latest state when returning to the tab.</li>
+        <li><strong>Background Refresh:</strong> Syncs periodically every 60s when idle.</li>
+      </ul>
     </div>
 
     <form onsubmit="handleSaveSyncCredentials(event)" class="space-y-3 text-xs">
@@ -503,7 +503,7 @@
       <div class="pt-2 flex flex-col gap-2">
         <button type="submit" class="w-full py-3 theme-primary-bg text-slate-950 font-extrabold rounded-xl text-xs transition hover:opacity-90 flex items-center justify-center gap-2 shadow-lg">
           <i class="fa-solid fa-link"></i>
-          <span>Save & Connect Cloud Vault</span>
+          <span>Save Credentials & Enable Auto-Sync</span>
         </button>
       </div>
     </form>
@@ -521,11 +521,11 @@
       <div class="grid grid-cols-2 gap-2 text-xs">
         <button onclick="syncFromCloud(true)" class="py-2.5 bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-200 font-bold rounded-xl transition flex items-center justify-center gap-2">
           <i class="fa-solid fa-cloud-arrow-down theme-primary-text"></i>
-          <span>Pull from Cloud</span>
+          <span>Manual Force Pull</span>
         </button>
         <button onclick="syncToCloud(true)" class="py-2.5 bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-200 font-bold rounded-xl transition flex items-center justify-center gap-2">
           <i class="fa-solid fa-cloud-arrow-up theme-secondary-text"></i>
-          <span>Push to Cloud</span>
+          <span>Manual Force Push</span>
         </button>
       </div>
     </div>
@@ -678,12 +678,15 @@
     activeTaskId: localStorage.getItem('flowmo_active_task_id') || '',
     currentTheme: JSON.parse(localStorage.getItem('flowmo_theme') || JSON.stringify(PRESET_THEMES.emerald)),
     currentFont: JSON.parse(localStorage.getItem('flowmo_font') || JSON.stringify(FONT_PRESETS.default)),
-    // Cloud Sync Credentials (Option B)
+    // Cloud Sync Credentials (JSONbin.io)
     syncBinId: localStorage.getItem('flowmo_bin_id') || '',
     syncApiKey: localStorage.getItem('flowmo_api_key') || '',
     lastSyncedAt: localStorage.getItem('flowmo_last_synced') || null,
     isSyncing: false
   };
+
+  let autoSyncTimer = null;
+  let lastPullTimestamp = 0;
 
   function showToast(title, message, iconClass = 'fa-cloud-check', isError = false) {
     const toast = document.getElementById('toastNotification');
@@ -754,7 +757,7 @@
     }
   }
 
-  /* OPTION B: JSONBIN.IO CLOUD SYNC ENGINE */
+  /* AUTOMATIC BACKGROUND SYNC ENGINE */
   function toggleSyncModal() {
     const modal = document.getElementById('syncModal');
     const binInput = document.getElementById('syncBinIdInput');
@@ -778,26 +781,36 @@
 
     if (!isConnected) {
       if (badgeDot) badgeDot.className = 'h-2.5 w-2.5 rounded-full bg-slate-500';
-      if (statusText) statusText.textContent = 'Disconnected';
-      if (lastTime) lastTime.textContent = 'No Bin configured';
+      if (statusText) statusText.textContent = 'Auto-Sync Disabled';
+      if (lastTime) lastTime.textContent = 'No credentials set';
       if (sidebarDot) sidebarDot.className = 'absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-slate-600';
       if (sidebarIcon) sidebarIcon.className = 'fa-solid fa-cloud text-sm text-slate-500';
     } else if (state.isSyncing) {
       if (badgeDot) badgeDot.className = 'h-2.5 w-2.5 rounded-full bg-amber-400 animate-ping';
-      if (statusText) statusText.textContent = 'Syncing...';
+      if (statusText) statusText.textContent = 'Saving to cloud...';
       if (sidebarDot) sidebarDot.className = 'absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-amber-400 animate-pulse';
       if (sidebarIcon) sidebarIcon.className = 'fa-solid fa-cloud-arrow-up text-sm text-amber-400';
     } else {
       if (badgeDot) badgeDot.className = 'h-2.5 w-2.5 rounded-full bg-emerald-400';
-      if (statusText) statusText.textContent = 'Connected & Active';
+      if (statusText) statusText.textContent = 'Auto-Sync Active';
       if (sidebarDot) sidebarDot.className = 'absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-emerald-400';
       if (sidebarIcon) sidebarIcon.className = 'fa-solid fa-cloud text-sm text-emerald-400';
 
       if (lastTime && state.lastSyncedAt) {
         const d = new Date(state.lastSyncedAt);
-        lastTime.textContent = `Synced ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+        lastTime.textContent = `Auto-synced ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
       }
     }
+  }
+
+  // Automatic debounced sync call triggered after any change
+  function autoSyncTrigger() {
+    if (!state.syncBinId || !state.syncApiKey) return;
+
+    if (autoSyncTimer) clearTimeout(autoSyncTimer);
+    autoSyncTimer = setTimeout(() => {
+      syncToCloud(false);
+    }, 1000); // Debounce push by 1 second
   }
 
   async function syncToCloud(showNotification = false) {
@@ -835,7 +848,7 @@
       localStorage.setItem('flowmo_last_synced', state.lastSyncedAt);
 
       if (showNotification) {
-        showToast('Cloud Sync Complete', 'Data successfully backed up to JSONbin.', 'fa-cloud-arrow-up');
+        showToast('Cloud Sync Complete', 'Data successfully backed up to cloud.', 'fa-cloud-arrow-up');
       }
     } catch (err) {
       console.error('JSONbin Sync Push Error:', err);
@@ -848,7 +861,7 @@
     }
   }
 
-  async function syncFromCloud(showNotification = true) {
+  async function syncFromCloud(showNotification = false) {
     if (!state.syncBinId || !state.syncApiKey) {
       if (showNotification) showToast('Sync Error', 'Please set your JSONbin credentials first.', 'fa-triangle-exclamation', true);
       return;
@@ -899,9 +912,10 @@
         }
 
         state.lastSyncedAt = new Date().toISOString();
+        lastPullTimestamp = Date.now();
         localStorage.setItem('flowmo_last_synced', state.lastSyncedAt);
 
-        // Refresh UI
+        // Refresh UI components
         renderTasks();
         populateTaskDropdowns();
         updateWeekCalendar();
@@ -909,7 +923,7 @@
         updateStatsHeader();
 
         if (showNotification) {
-          showToast('Data Pulled', 'Loaded latest data from JSONbin vault.', 'fa-cloud-arrow-down');
+          showToast('Data Pulled', 'Loaded latest data from cloud vault.', 'fa-cloud-arrow-down');
         }
       }
     } catch (err) {
@@ -934,16 +948,10 @@
     localStorage.setItem('flowmo_bin_id', binId);
     localStorage.setItem('flowmo_api_key', apiKey);
 
-    showToast('Vault Connected', 'Credentials saved. Syncing data now...', 'fa-link');
+    showToast('Vault Connected', 'Auto-Sync is now active across your devices.', 'fa-link');
     syncFromCloud(false).then(() => {
-      syncToCloud(true);
-    });
-  }
-
-  function autoSyncTrigger() {
-    if (state.syncBinId && state.syncApiKey) {
       syncToCloud(false);
-    }
+    });
   }
 
   /* TASK MANAGEMENT ENGINE */
@@ -996,7 +1004,6 @@
       state.activeTaskId = '';
       localStorage.removeItem('flowmo_active_task_id');
     }
-    // Update any session pointing to this deleted task
     state.sessions.forEach(s => {
       if (s.taskId === taskId) s.taskId = null;
     });
@@ -1081,6 +1088,7 @@
     localStorage.setItem('flowmo_active_task_id', taskId);
     renderTasks();
     populateTaskDropdowns();
+    autoSyncTrigger();
   }
 
   function updateActiveTaskProgressBar() {
@@ -1133,7 +1141,6 @@
     const sStart = new Date(sess.startTime);
     const sEnd = sess.endTime ? new Date(sess.endTime) : new Date(sStart.getTime() + sess.durationMs);
 
-    // Populate task selection dropdown inside inspector
     const inspectSelect = document.getElementById('inspectTaskSelect');
     if (inspectSelect) {
       inspectSelect.innerHTML = '<option value="">-- Unassigned Session --</option>' +
@@ -1151,7 +1158,6 @@
     document.getElementById('inspectPauses').textContent = `${sess.pauseCount || 0} pause${(sess.pauseCount || 0) === 1 ? '' : 's'}`;
     document.getElementById('inspectSessionId').textContent = `ID: ${sess.id.slice(-6)}`;
 
-    // Set Google Calendar Export Link
     const gcalLink = document.getElementById('inspectGCalLink');
     if (gcalLink) {
       gcalLink.href = generateGCalLinkForSession(sess);
@@ -1180,7 +1186,6 @@
       document.getElementById('inspectTitle').textContent = updatedTask ? updatedTask.title : 'Unassigned Focus Session';
       document.getElementById('inspectCategory').textContent = updatedTask ? updatedTask.category : 'GENERAL';
 
-      // Refresh Google Calendar Link with new task details
       const gcalLink = document.getElementById('inspectGCalLink');
       if (gcalLink) {
         gcalLink.href = generateGCalLinkForSession(sess);
@@ -1449,7 +1454,6 @@
       if (eventCol) eventCol.innerHTML = '';
     }
 
-    // Render Logged Focus Sessions on the Calendar Grid
     state.sessions.forEach(sess => {
       const sStart = new Date(sess.startTime);
       const sEnd = sess.endTime ? new Date(sess.endTime) : new Date(sStart.getTime() + sess.durationMs);
@@ -1563,6 +1567,19 @@
     autoSyncTrigger();
   }
 
+  /* AUTOMATIC TAB FOCUS & BACKGROUND POLLING */
+  function handleVisibilityOrFocusChange() {
+    if (document.hidden) return;
+
+    tickTimer();
+
+    // Auto-pull from cloud on returning to the tab if at least 15s have passed since last pull
+    const now = Date.now();
+    if (state.syncBinId && state.syncApiKey && (now - lastPullTimestamp > 15000)) {
+      syncFromCloud(false);
+    }
+  }
+
   document.addEventListener('DOMContentLoaded', () => {
     applyFontToDOM(state.currentFont);
     applyThemeToDOM(state.currentTheme);
@@ -1574,7 +1591,7 @@
     updateStatsHeader();
     updateSyncStatusUI();
 
-    // Auto-pull initial data if credentials exist
+    // Initial background pull on load
     if (state.syncBinId && state.syncApiKey) {
       syncFromCloud(false);
     }
@@ -1582,8 +1599,16 @@
     const scrollContainer = document.getElementById('calendarScrollContainer');
     if (scrollContainer) scrollContainer.scrollTop = 8 * 48;
 
-    document.addEventListener('visibilitychange', () => { if (!document.hidden) tickTimer(); });
-    window.addEventListener('focus', () => { tickTimer(); });
+    // Listeners for page re-entry / tab switching
+    document.addEventListener('visibilitychange', handleVisibilityOrFocusChange);
+    window.addEventListener('focus', handleVisibilityOrFocusChange);
+
+    // Periodic gentle background poll every 60 seconds (only when not actively timing a flow session)
+    setInterval(() => {
+      if (!document.hidden && state.syncBinId && state.syncApiKey && state.mode !== 'FLOWING') {
+        syncFromCloud(false);
+      }
+    }, 60000);
   });
 </script>
 </body>
